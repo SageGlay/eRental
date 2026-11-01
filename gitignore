@@ -1,0 +1,95 @@
+# ============================================================
+# eRental .gitignore (Node.js + Vite + React + VS Code)
+# ============================================================
+
+# --- Dependencies ---
+node_modules/
+.pnp
+.pnp.js
+
+# --- Build and distribution output ---
+dist/
+dist-ssr/
+build/
+out/
+coverage/
+.vite/
+*.tgz
+
+# --- Environment variables and local secrets ---
+# Every .env file is ignored EXCEPT the safe template, .env.example
+.env
+.env.*
+!.env.example
+*.local
+
+# --- Credentials, keys, and secret files ---
+secrets/
+.secrets/
+credentials.json
+service-account*.json
+serviceAccountKey*.json
+*.secret
+*.secrets
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# --- Supabase CLI local state (for future use) ---
+supabase/.temp/
+supabase/.branches/
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Caches and temporary files ---
+.cache/
+.eslintcache
+.stylelintcache
+.npm/
+.pnpm-store/
+.tmp/
+.temp/
+
+# --- Deployment CLI folders ---
+.vercel/
+.netlify/
+
+# --- VS Code (shared extension recommendations may be kept) ---
+.vscode/*
+!.vscode/extensions.json
+
+# --- Other editors and IDEs ---
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Windows ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- Linux ---
+.directory
+.Trash-*
