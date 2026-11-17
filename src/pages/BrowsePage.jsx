@@ -4,6 +4,7 @@ import ListingCard from '../components/ListingCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import { useCategories } from '../hooks/useCategories.js'
 import { useSearchListings } from '../hooks/useSearchListings.js'
+import LoadError from '../components/LoadError.jsx'
 
 const PERIODS = ['hour', 'day', 'week', 'month', 'year']
 const SORTS = [['relevance', 'Best match'], ['newest', 'Newest'], ['price_asc', 'Price: low to high'], ['price_desc', 'Price: high to low']]
@@ -69,7 +70,7 @@ function FilterForm({ initial, categories, onApply, onClear }) {
 
 export default function BrowsePage() {
   const [params, setParams] = useSearchParams()
-  const { categories, loading: catsLoading } = useCategories()
+  const { categories, loading: catsLoading, error: catsError, retry: retryCategories } = useCategories()
 
   const get = (key) => params.get(key) ?? ''
   const slug = get('category')
@@ -77,7 +78,8 @@ export default function BrowsePage() {
   const initial = { q: get('q'), category: slug, location: get('location'), min: get('min'), max: get('max'), per: get('per'), sort: get('sort') || (get('q') ? 'relevance' : 'newest') }
   // -1 matches nothing, so an unknown category in the address shows "no results" instead of everything.
   const filters = { q: initial.q, categoryId: slug ? (category?.id ?? -1) : null, location: initial.location, min: initial.min, max: initial.max, per: initial.per, sort: initial.sort }
-  const { items, total, loading, loadingMore, error, loadMore } = useSearchListings(filters, !slug || !catsLoading)
+  const waitingForCategory = Boolean(slug && (catsLoading || catsError))
+  const { items, total, hasMore, loading, loadingMore, error, moreError, loadMore, retry } = useSearchListings(filters, !waitingForCategory)
 
   function apply(f) {
     const next = {}
@@ -89,9 +91,10 @@ export default function BrowsePage() {
     <section className="container page">
       <h1>Browse rentals</h1>
       <FilterForm key={params.toString()} initial={initial} categories={categories} onApply={apply} onClear={() => setParams({})} />
-      {error && <p className="form-error" role="alert">We couldn’t load listings ({error}).</p>}
-      <p className="results__count" aria-live="polite">{loading ? 'Searching…' : error ? '' : `${total} listing${total === 1 ? '' : 's'} found`}</p>
-      {!loading && !error && items.length === 0 && (
+      {catsError && <LoadError onRetry={retryCategories}>{catsError}</LoadError>}
+      {error && <LoadError onRetry={retry}>We couldn’t load listings. {error}</LoadError>}
+      <p className="results__count" aria-live="polite">{waitingForCategory ? catsLoading ? 'Loading categories…' : '' : loading ? 'Searching…' : error ? '' : `${total} listing${total === 1 ? '' : 's'} found`}</p>
+      {!waitingForCategory && !loading && !error && items.length === 0 && (
         <EmptyState icon="🔎" title="No listings match your search" action={<button type="button" className="btn btn-primary" onClick={() => setParams({})}>Clear filters</button>}>
           Try a shorter keyword, a different category, or a wider price range.
         </EmptyState>
@@ -101,9 +104,10 @@ export default function BrowsePage() {
           {items.map((l) => <li key={l.id}><ListingCard listing={l} /></li>)}
         </ul>
       )}
-      {items.length > 0 && items.length < total && (
+      {items.length > 0 && hasMore && (
         <div className="load-more">
-          <button type="button" className="btn btn-primary" disabled={loadingMore} onClick={loadMore}>{loadingMore ? 'Loading…' : 'Load more'}</button>
+          {moreError && <p className="form-error" role="alert">{moreError}</p>}
+          <button type="button" className="btn btn-primary" disabled={loadingMore} onClick={loadMore}>{loadingMore ? 'Loading…' : moreError ? 'Try loading more again' : 'Load more'}</button>
         </div>
       )}
     </section>
