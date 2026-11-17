@@ -1,81 +1,53 @@
 # eRental
 
-Responsive online rental marketplace for finding, listing, and requesting rentals in Iligan City, Philippines.
+A React marketplace prototype for renting and listing items and properties in Iligan City. One account can rent and own listings. Supabase provides authentication, Postgres/RLS and photo storage; payments are simulated.
 
-> **Project status: initial setup / planning.**
-> No application code exists yet. This repository currently contains only project documentation and repository configuration files.
+## Develop
 
-## Purpose
+Use Node.js 22 or newer (Node 24 and npm 11 were validated).
 
-eRental is a college group project. It aims to make renting easier for people in **Iligan City, Philippines**, our initial target location. The goal is a responsive website (usable on phones, tablets, and computers) where people can find rentals, list their own rentals, and send rental requests.
+```sh
+npm ci
+cp .env.example .env
+# Fill in the public Supabase project URL and publishable/anon key.
+npm run dev
+```
 
-## Planned technology stack
+The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from the environment or a local `.env` file. Restart Vite after changing them. Both values are exposed in the frontend bundle; never supply a service-role key, secret key or database password. `.env` files are ignored by Git.
 
-> ⚠️ **These technologies are planned, not yet implemented.** None of them are installed or configured in this repository yet.
+```sh
+npm run build
+npm run preview
+```
 
-| Area | Planned technology |
-| --- | --- |
-| UI library | React |
-| Build tool / dev server | Vite |
-| Language | JavaScript |
-| Styling | Regular CSS |
-| Backend services | Supabase (such as database and authentication) |
-| Version control | Git and GitHub |
+Production hosting must serve `index.html` for SPA deep links.
 
-## Local setup (for later)
+## Regression checks
 
-> ⚠️ **These steps will only work after the app has been scaffolded.** There is no `package.json` yet, so they cannot be run today. This section will be updated when the app is ready.
+```sh
+npm ci
+npx playwright install chromium  # when Chromium is not already installed
+npm test
+```
 
-**You will need:** [Git](https://git-scm.com/), [Node.js](https://nodejs.org/) (current LTS version), and a code editor such as [VS Code](https://code.visualstudio.com/).
+The browser suite starts its own Vite server on port 4174 with fictional Supabase settings and intercepts API requests. It exercises retry/partial-save behavior, availability failures and overlaps, stale search pages, session/permission recovery, and listing/category reads. It never needs real Supabase credentials or writes live data. The configuration uses `/usr/bin/chromium` when available; set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use another installed Chromium binary.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/SageGlay/eRental.git
-   cd eRental
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create your local environment file (see the next section).
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-5. Open the local address shown in the terminal (Vite usually uses `http://localhost:5173`).
+These tests validate frontend behavior against controlled API responses. They do not establish deployed RLS, database constraints or real authenticated end-to-end behavior.
 
-## Environment variables
+## Current implementation
 
-The app will read its Supabase settings from a local `.env` file, which is **never** committed to Git.
+- Email/password accounts, editable individual/business profiles and administrator route checks.
+- Create/edit listings with category details, prices/deposits/terms, up to ten photographs, availability status and soft removal.
+- Keyword/category/text-location/price search and sorting.
+- Rental requests, owner decisions, booking schedule/history, simulated payments and reviews.
+- Text conversations, unread message counts, listing reports and administrator report resolution.
 
-1. Copy the example file:
-   ```bash
-   # macOS / Linux / Git Bash
-   cp .env.example .env
+The existing architecture is in `src/pages`, `src/components`, `src/hooks`, `src/context` and `src/lib`; visual tokens live in `src/styles/tokens.css`.
 
-   # Windows Command Prompt
-   copy .env.example .env
+## Supabase schema and live validation
 
-   # Windows PowerShell
-   Copy-Item .env.example .env
-   ```
-2. Open `.env` and replace the placeholders with your Supabase project's values (Supabase dashboard → Project Settings → API):
+The checked-in migration records the foundation tables, privileges/RLS, category seed and `listing-photos` bucket. It does not contain the later definitions used by bookings, conversations/messages, reviews, reports, simulated payments or search/availability/resolution RPCs. Obtain and review the deployed definitions before proposing schema changes. Do not replay the foundation migration against an existing project as a repair.
 
-   | Variable | What it is |
-   | --- | --- |
-   | `VITE_SUPABASE_URL` | Your Supabase project URL |
-   | `VITE_SUPABASE_ANON_KEY` | Your Supabase publishable / anon key |
+Live verification also requires network access to the configured project hostname and appropriate test users. Preserve database enforcement: frontend route checks and date checks are usability defenses, not substitutes for RLS, transactional booking constraints or authorized RPCs.
 
-3. If you don't have the values, ask a teammate who has access to the Supabase project, and share them privately (never in commits, issues, or screenshots).
-
-**Only the publishable / anon key belongs in frontend environment variables.** Anything starting with `VITE_` is visible to everyone who uses the website. The anon key is designed to be public, but it is only safe when Row Level Security (RLS) is enabled on the database tables, which we will set up when Supabase is configured.
-
-## ⚠️ Security warning
-
-- **Never commit `.env` or any file containing secret keys.** The `.gitignore` is set up to block them, but always double-check with `git status` before committing.
-- **Never use the Supabase `service_role` key (or "secret" key) in the frontend, in `.env.example`, or anywhere in this repository.**
-- If a secret is ever committed or pushed by accident, tell the team immediately and **rotate (replace) the key in Supabase**. Deleting the file or the commit afterward is not enough, because the old key must be treated as exposed.
-
-## Project status
-
-🚧 **Initial setup / planning.** Repository hygiene (`.gitignore`, `.env.example`, this README) comes first. The Vite + React app, the Supabase configuration, and all features have not been started.
+Keep development changes local unless committing or pushing is explicitly authorized.

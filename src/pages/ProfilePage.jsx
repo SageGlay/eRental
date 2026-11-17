@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import LoadError from '../components/LoadError.jsx'
 
 function ProfileForm({ user, profile, onSaved }) {
   const [displayName, setDisplayName] = useState(profile.display_name)
@@ -9,9 +10,11 @@ function ProfileForm({ user, profile, onSaved }) {
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
+  const submitting = useRef(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (submitting.current) return
     setError('')
     setSaved(false)
     const name = displayName.trim()
@@ -22,15 +25,20 @@ function ProfileForm({ user, profile, onSaved }) {
     }
 
     setBusy(true)
-    const { error: err } = await supabase
-      .from('profiles')
-      .update({ display_name: name, account_type: accountType, business_name: accountType === 'business' ? business : null })
-      .eq('id', user.id)
-    setBusy(false)
-
-    if (err) return setError(`We couldn’t save your profile. ${err.message}`)
-    setSaved(true)
-    onSaved()
+    submitting.current = true
+    try {
+      const { data, error: err } = await supabase.from('profiles')
+        .update({ display_name: name, account_type: accountType, business_name: accountType === 'business' ? business : null })
+        .eq('id', user.id).select('id').single()
+      if (err || !data) return setError('We couldn’t save your profile. Try again; your changes are still here.')
+      setSaved(true)
+      onSaved()
+    } catch {
+      setError('We couldn’t confirm your profile was saved. Try again; your changes are still here.')
+    } finally {
+      submitting.current = false
+      setBusy(false)
+    }
   }
 
   return (
@@ -66,13 +74,14 @@ function ProfileForm({ user, profile, onSaved }) {
 }
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, profile, profileLoading, profileError, refreshProfile } = useAuth()
   return (
     <section className="container auth">
       <div className="auth__card">
         <h1>My profile</h1>
         <p className="auth__sub">{user.email}</p>
-        {profile ? <ProfileForm user={user} profile={profile} onSaved={refreshProfile} /> : <p aria-busy="true">Loading your profile…</p>}
+        {profileError && <LoadError onRetry={refreshProfile}>{profileError}</LoadError>}
+        {profile ? <ProfileForm key={user.id} user={user} profile={profile} onSaved={refreshProfile} /> : profileLoading ? <p aria-busy="true">Loading your profile…</p> : null}
       </div>
     </section>
   )

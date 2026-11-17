@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient.js'
 import { formatDate, formatPrice, formatRate } from '../lib/format.js'
 import { photoUrl, sortedPhotos } from '../lib/photos.js'
 import { fieldsFor } from '../data/categoryFields.js'
@@ -11,29 +10,24 @@ import OwnerRating from '../components/OwnerRating.jsx'
 import MessageOwnerButton from '../components/MessageOwnerButton.jsx'
 import RequestForm from '../components/RequestForm.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import LoadError from '../components/LoadError.jsx'
+import { useListingRecord } from '../hooks/useListingRecord.js'
 
 const FIELDS = 'id, owner_id, title, description, price, price_period, deposit, location_text, terms, details, status, created_at, categories(name, slug), listing_photos(storage_path, sort_order), profiles(display_name, account_type, business_name, created_at)'
 
 export default function ListingDetail() {
   const { id } = useParams()
   const { user } = useAuth()
-  const [state, setState] = useState({ listing: null, loading: Boolean(supabase), error: supabase ? null : 'Supabase is not configured.' })
+  const { listing, loading, error, retry } = useListingRecord(id, FIELDS)
   const [active, setActive] = useState(0)
 
   useEffect(() => {
-    if (!supabase) return
-    let cancelled = false
-    setState({ listing: null, loading: true, error: null })
     setActive(0)
-    supabase.from('listings').select(FIELDS).eq('id', id).maybeSingle().then(({ data, error }) => {
-      if (!cancelled) setState({ listing: data, loading: false, error: error ? error.message : null })
-    })
-    return () => { cancelled = true }
   }, [id])
 
-  const { listing, loading, error } = state
   if (loading) return <p className="container page" aria-busy="true">Loading listing…</p>
-  if (error || !listing) {
+  if (error) return <section className="container page"><LoadError onRetry={retry}>{error}</LoadError></section>
+  if (!listing) {
     return (
       <section className="container page">
         <EmptyState icon="🔍" title="Listing not found" action={<Link className="btn btn-primary" to="/">Back to home</Link>}>
@@ -54,7 +48,7 @@ export default function ListingDetail() {
         <div>
           <div className="gallery__main">
             {photos.length > 0
-              ? <img src={photoUrl(photos[active].storage_path)} alt={`${listing.title}, photo ${active + 1} of ${photos.length}`} />
+              ? <img src={photoUrl(photos[Math.min(active, photos.length - 1)].storage_path)} alt={`${listing.title}, photo ${Math.min(active + 1, photos.length)} of ${photos.length}`} />
               : <span aria-hidden="true">📷</span>}
           </div>
           {photos.length > 1 && (
@@ -85,8 +79,8 @@ export default function ListingDetail() {
             <p className="detail__meta">Member since {owner ? formatDate(owner.created_at) : ''}</p>
           </div>
           <MessageOwnerButton listing={listing} />
-          <RequestForm listing={listing} />
-          <ReportListing listing={listing} />
+          <RequestForm key={`request-${listing.id}-${user?.id ?? 'guest'}`} listing={listing} />
+          <ReportListing key={`report-${listing.id}-${user?.id ?? 'guest'}`} listing={listing} />
         </div>
       </div>
 

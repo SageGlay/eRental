@@ -1,16 +1,18 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { isSupabaseConfigured } from '../lib/supabaseClient.js'
+import LoadError from '../components/LoadError.jsx'
 
 export default function AuthPage({ mode }) {
   const isRegister = mode === 'register'
-  const { user, loading, signIn, signUp } = useAuth()
+  const { user, loading, signIn, signUp, authError, retrySession } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ fullName: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const submitting = useRef(false)
 
   if (!loading && user) return <Navigate to="/" replace />
 
@@ -18,6 +20,7 @@ export default function AuthPage({ mode }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (submitting.current || loading || !isSupabaseConfigured) return
     setError('')
     setNotice('')
     const email = form.email.trim()
@@ -27,14 +30,20 @@ export default function AuthPage({ mode }) {
     if (!form.password) return setError('Please enter your password.')
 
     setBusy(true)
-    const { data, error: err } = isRegister
-      ? await signUp(email, form.password, form.fullName.trim())
-      : await signIn(email, form.password)
-    setBusy(false)
-
-    if (err) return setError(err.message === 'Invalid login credentials' ? 'Wrong email or password.' : err.message)
-    if (isRegister && !data.session) return setNotice('Account created. Check your email to confirm your address, then log in.')
-    navigate('/')
+    submitting.current = true
+    try {
+      const { data, error: err } = isRegister
+        ? await signUp(email, form.password, form.fullName.trim())
+        : await signIn(email, form.password)
+      if (err) return setError(err.message === 'Invalid login credentials' ? 'Wrong email or password.' : err.message)
+      if (isRegister && !data.session) return setNotice('Account created. Check your email to confirm your address, then log in.')
+      navigate('/')
+    } catch {
+      setError('We couldn’t connect. Check your connection and try again.')
+    } finally {
+      submitting.current = false
+      setBusy(false)
+    }
   }
 
   return (
@@ -47,6 +56,7 @@ export default function AuthPage({ mode }) {
         {!isSupabaseConfigured && (
           <p className="form-error" role="alert">Supabase is not configured. Add your keys to the .env file and restart npm run dev.</p>
         )}
+        {authError && <LoadError onRetry={retrySession}>{authError}</LoadError>}
         <form onSubmit={handleSubmit} noValidate>
           {isRegister && (
             <div className="field">
@@ -65,7 +75,7 @@ export default function AuthPage({ mode }) {
           </div>
           {error && <p className="form-error" role="alert">{error}</p>}
           {notice && <p className="form-success" role="status">{notice}</p>}
-          <button type="submit" className="btn btn-primary btn-block" disabled={busy || !isSupabaseConfigured}>
+          <button type="submit" className="btn btn-primary btn-block" disabled={busy || loading || !isSupabaseConfigured}>
             {busy ? 'Please wait…' : isRegister ? 'Create account' : 'Log in'}
           </button>
         </form>

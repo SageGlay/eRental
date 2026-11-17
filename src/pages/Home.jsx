@@ -5,6 +5,7 @@ import ListingCard from '../components/ListingCard.jsx'
 import { useLatestListings } from '../hooks/useListings.js'
 import { useCategories } from '../hooks/useCategories.js'
 import { categories as categoryIcons } from '../data/categories.js'
+import LoadError from '../components/LoadError.jsx'
 
 // Icons are a display detail, so they stay in the app and are matched to database rows by slug.
 const emojiBySlug = Object.fromEntries(categoryIcons.map((c) => [c.slug, c.emoji]))
@@ -16,7 +17,7 @@ const steps = [
 ]
 
 export default function Home() {
-  const { categories, loading, error } = useCategories()
+  const { categories, loading, error, retry } = useCategories()
   const latest = useLatestListings(6)
   return (
     <>
@@ -36,7 +37,7 @@ export default function Home() {
             <p>Ten categories cover everything from motorbikes and rooms to party equipment and gowns.</p>
           </div>
           {loading && <p aria-busy="true">Loading categories…</p>}
-          {error && <p className="form-error" role="alert">We couldn’t load the categories ({error}). Check your connection and your .env settings.</p>}
+          {error && <LoadError onRetry={retry}>{error}</LoadError>}
           <ul className="category-grid">
             {categories.map((c) => (
               <li key={c.slug}>

@@ -19,6 +19,7 @@
 .breadcrumb { color: var(--muted); font-size: 0.9375rem; }
 .breadcrumb a { color: var(--primary); }
 .detail { display: grid; gap: var(--s5); }
+.detail > div { min-width: 0; }
 @media (min-width: 900px) { .detail { grid-template-columns: 1.3fr 1fr; align-items: start; } }
 .gallery__main { display: grid; place-items: center; aspect-ratio: 4 / 3; overflow: hidden; border-radius: var(--r-md); background: var(--surface); font-size: 3rem; }
 .gallery__main img { width: 100%; height: 100%; object-fit: cover; }
@@ -39,6 +40,13 @@
 .specs dd { margin: 0; font-weight: 600; text-align: right; }
 
 /* Create listing form */
+.form-controls { min-width: 0; margin: 0; padding: 0; border: 0; }
+.photo-error { display: block; color: var(--danger-text); font-size: 0.875rem; overflow-wrap: anywhere; }
+.photo-previews .field__hint { display: block; overflow-wrap: anywhere; }
+.photo-previews .photo-preview--failed { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: var(--s3); }
+.photo-preview--failed img { width: var(--photo-size); flex: 0 0 var(--photo-size); }
+.photo-preview--failed .photo-caption { min-width: 0; }
+.photo-preview--failed button { right: auto; left: var(--s1); }
 .form-page { max-width: 720px; }
 .form-section { margin: var(--s5) 0 var(--s3); padding-top: var(--s4); border-top: 1px solid var(--border); font-size: 1.125rem; }
 .field select, .field textarea { padding: 0 var(--s3); border: 1px solid #94a3b8; border-radius: var(--r-sm); background: #fff; color: var(--text); font: inherit; }
@@ -80,14 +88,15 @@
   .filters .wider { grid-column: span 2; }
 }
 .results__count { margin: 0 0 var(--s3); color: var(--muted); }
-.load-more { display: flex; justify-content: center; margin-top: var(--s5); }
+.load-more { display: grid; justify-items: center; gap: var(--s3); margin-top: var(--s5); }
 
 /* Requests and bookings */
 .request-form { margin-top: var(--s4); padding: var(--s4); border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
 .request-form h2 { margin: 0 0 var(--s3); font-size: 1.25rem; }
 .request-form .detail__meta { margin: var(--s3) 0 0; font-size: 0.875rem; }
 .booked-list { margin: 0 0 var(--s4); padding-left: var(--s5); color: var(--muted); font-size: 0.9375rem; list-style: disc; }
-.field-row--even { grid-template-columns: 1fr 1fr; }
+.field-row--even { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) { .field-row--even { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .tabs { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s5); border-bottom: 1px solid var(--border); }
 .tabs button { padding: var(--s3) var(--s4); border: 0; border-bottom: 3px solid transparent; background: none; color: var(--muted); font-weight: 600; cursor: pointer; }
 .tabs button[aria-selected='true'] { border-bottom-color: var(--primary); color: var(--primary); }

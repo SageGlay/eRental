@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import CreateListing from './CreateListing.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import LoadError from '../components/LoadError.jsx'
+import { useListingRecord } from '../hooks/useListingRecord.js'
 
 const FIELDS = 'id, owner_id, category_id, title, description, price, price_period, deposit, location_text, terms, details, status, removed_by_admin, listing_photos(id, storage_path, sort_order)'
 
@@ -11,18 +11,9 @@ const FIELDS = 'id, owner_id, category_id, title, description, price, price_peri
 export default function EditListing() {
   const { id } = useParams()
   const { user } = useAuth()
-  const [state, setState] = useState({ listing: null, loading: true })
-
-  useEffect(() => {
-    let cancelled = false
-    supabase.from('listings').select(FIELDS).eq('id', id).maybeSingle().then(({ data }) => {
-      if (!cancelled) setState({ listing: data, loading: false })
-    })
-    return () => { cancelled = true }
-  }, [id])
-
-  const { listing, loading } = state
+  const { listing, loading, error, retry } = useListingRecord(id, FIELDS)
   if (loading) return <p className="container page" aria-busy="true">Loading…</p>
+  if (error) return <section className="container page"><LoadError onRetry={retry}>{error}</LoadError></section>
   if (!listing || listing.owner_id !== user.id || listing.status === 'removed' || listing.removed_by_admin) {
     return (
       <section className="container page">
