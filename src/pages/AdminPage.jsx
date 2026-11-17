@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { formatDate } from '../lib/format.js'
 import { REASONS } from '../components/ReportListing.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import AdminNavigation from '../components/AdminNavigation.jsx'
 
 const SELECT = 'id, reason, details, status, admin_note, created_at, listings(id, title, status, removed_by_admin, profiles(display_name)), reporter:profiles!listing_reports_reporter_id_fkey(display_name)'
 const REASON_LABELS = Object.fromEntries(REASONS)
@@ -91,6 +92,7 @@ function ReportsPanel() {
 export default function AdminPage() {
   return (
     <section className="container page">
+      <AdminNavigation />
       <h1>Admin</h1>
       <h2>Listing reports</h2>
       <p className="detail__meta">Dismiss a report if the listing is fine, or remove the listing. Removing a listing closes every open report about it. Owners can’t bring back a listing an admin removed.</p>

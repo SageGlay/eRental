@@ -11,6 +11,10 @@
   --text: #0f172a;
   --muted: #475569;
   --danger-text: #991b1b;
+  --scrollbar-thumb: #94a3b8;
+  --scrollbar-track: var(--surface);
+  --scrollbar-hover: #64748b;
+  --overlay: rgb(15 23 42 / 0.5);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 

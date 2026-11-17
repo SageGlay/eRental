@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import Layout from './components/layout/Layout.jsx'
 import Home from './pages/Home.jsx'
 import AuthPage from './pages/AuthPage.jsx'
@@ -15,6 +16,9 @@ import EditListing from './pages/EditListing.jsx'
 import MyListings from './pages/MyListings.jsx'
 import BrowsePage from './pages/BrowsePage.jsx'
 import NotFound from './pages/NotFound.jsx'
+const VerificationPage = lazy(() => import('./pages/VerificationPage.jsx'))
+const AdminVerificationPage = lazy(() => import('./pages/AdminVerificationPage.jsx'))
+const verificationLoading = <p className="container page" role="status">Loading verification…</p>
 
 export default function App() {
   return (
@@ -28,10 +32,12 @@ export default function App() {
         <Route path="messages" element={<RequireAuth><MessagesPage /></RequireAuth>} />
         <Route path="messages/:id" element={<RequireAuth><ConversationPage /></RequireAuth>} />
         <Route path="admin" element={<RequireAdmin><AdminPage /></RequireAdmin>} />
+        <Route path="admin/verification" element={<RequireAdmin><Suspense fallback={verificationLoading}><AdminVerificationPage /></Suspense></RequireAdmin>} />
         <Route path="my-listings" element={<RequireAuth><MyListings /></RequireAuth>} />
         <Route path="list" element={<RequireAuth><CreateListing /></RequireAuth>} />
         <Route path="login" element={<AuthPage mode="login" />} />
         <Route path="profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
+        <Route path="verification" element={<RequireAuth><Suspense fallback={verificationLoading}><VerificationPage /></Suspense></RequireAuth>} />
         <Route path="register" element={<AuthPage mode="register" />} />
         <Route path="*" element={<NotFound />} />
       </Route>

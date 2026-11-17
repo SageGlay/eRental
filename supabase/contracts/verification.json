@@ -1,0 +1,938 @@
+{
+    "enums": [
+    ],
+    "tables": [
+        {
+            "name": "profiles",
+            "schema": "public",
+            "rls_forced": false,
+            "rls_enabled": true
+        },
+        {
+            "name": "verification_submissions",
+            "schema": "public",
+            "rls_forced": false,
+            "rls_enabled": true
+        }
+    ],
+    "columns": [
+        {
+            "udt_name": "uuid",
+            "data_type": "uuid",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "id",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "display_name",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "avatar_url",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "account_type",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": "'individual'::text"
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "business_name",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "timestamptz",
+            "data_type": "timestamp with time zone",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "created_at",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": "now()"
+        },
+        {
+            "udt_name": "timestamptz",
+            "data_type": "timestamp with time zone",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "updated_at",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": "now()"
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "verified_kind",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "timestamptz",
+            "data_type": "timestamp with time zone",
+            "table_name": "profiles",
+            "udt_schema": "pg_catalog",
+            "column_name": "verified_at",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "uuid",
+            "data_type": "uuid",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "id",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": "gen_random_uuid()"
+        },
+        {
+            "udt_name": "uuid",
+            "data_type": "uuid",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "user_id",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "kind",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "document_type",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "document_path",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "details",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "status",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": "'pending'::text"
+        },
+        {
+            "udt_name": "text",
+            "data_type": "text",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "admin_note",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "uuid",
+            "data_type": "uuid",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "reviewed_by",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "timestamptz",
+            "data_type": "timestamp with time zone",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "reviewed_at",
+            "is_nullable": "YES",
+            "table_schema": "public",
+            "column_default": null
+        },
+        {
+            "udt_name": "timestamptz",
+            "data_type": "timestamp with time zone",
+            "table_name": "verification_submissions",
+            "udt_schema": "pg_catalog",
+            "column_name": "created_at",
+            "is_nullable": "NO",
+            "table_schema": "public",
+            "column_default": "now()"
+        }
+    ],
+    "indexes": [
+        {
+            "indexdef": "CREATE UNIQUE INDEX verification_one_pending_per_user ON public.verification_submissions USING btree (user_id) WHERE (status = 'pending'::text)",
+            "indexname": "verification_one_pending_per_user",
+            "tablename": "verification_submissions",
+            "schemaname": "public"
+        },
+        {
+            "indexdef": "CREATE INDEX verification_reviewer_idx ON public.verification_submissions USING btree (reviewed_by)",
+            "indexname": "verification_reviewer_idx",
+            "tablename": "verification_submissions",
+            "schemaname": "public"
+        },
+        {
+            "indexdef": "CREATE INDEX verification_status_idx ON public.verification_submissions USING btree (status, created_at DESC)",
+            "indexname": "verification_status_idx",
+            "tablename": "verification_submissions",
+            "schemaname": "public"
+        },
+        {
+            "indexdef": "CREATE UNIQUE INDEX verification_submissions_document_path_key ON public.verification_submissions USING btree (document_path)",
+            "indexname": "verification_submissions_document_path_key",
+            "tablename": "verification_submissions",
+            "schemaname": "public"
+        },
+        {
+            "indexdef": "CREATE UNIQUE INDEX verification_submissions_pkey ON public.verification_submissions USING btree (id)",
+            "indexname": "verification_submissions_pkey",
+            "tablename": "verification_submissions",
+            "schemaname": "public"
+        },
+        {
+            "indexdef": "CREATE INDEX verification_user_idx ON public.verification_submissions USING btree (user_id, created_at DESC)",
+            "indexname": "verification_user_idx",
+            "tablename": "verification_submissions",
+            "schemaname": "public"
+        }
+    ],
+    "policies": [
+        {
+            "cmd": "SELECT",
+            "qual": "true",
+            "roles": [
+                "anon",
+                "authenticated"
+            ],
+            "tablename": "profiles",
+            "permissive": "PERMISSIVE",
+            "policyname": "profiles are public",
+            "schemaname": "public",
+            "with_check": null
+        },
+        {
+            "cmd": "UPDATE",
+            "qual": "(id = ( SELECT auth.uid() AS uid))",
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "profiles",
+            "permissive": "PERMISSIVE",
+            "policyname": "users update own profile",
+            "schemaname": "public",
+            "with_check": "(id = ( SELECT auth.uid() AS uid))"
+        },
+        {
+            "cmd": "SELECT",
+            "qual": "((user_id = ( SELECT auth.uid() AS uid)) OR ( SELECT is_admin() AS is_admin))",
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "verification_submissions",
+            "permissive": "PERMISSIVE",
+            "policyname": "people and admins read verification submissions",
+            "schemaname": "public",
+            "with_check": null
+        },
+        {
+            "cmd": "INSERT",
+            "qual": null,
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "verification_submissions",
+            "permissive": "PERMISSIVE",
+            "policyname": "people submit for themselves",
+            "schemaname": "public",
+            "with_check": "(user_id = ( SELECT auth.uid() AS uid))"
+        },
+        {
+            "cmd": "DELETE",
+            "qual": "((bucket_id = 'listing-photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))",
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "objects",
+            "permissive": "PERMISSIVE",
+            "policyname": "listing photos: delete own files",
+            "schemaname": "storage",
+            "with_check": null
+        },
+        {
+            "cmd": "SELECT",
+            "qual": "((bucket_id = 'listing-photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))",
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "objects",
+            "permissive": "PERMISSIVE",
+            "policyname": "listing photos: see own folder",
+            "schemaname": "storage",
+            "with_check": null
+        },
+        {
+            "cmd": "UPDATE",
+            "qual": "((bucket_id = 'listing-photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))",
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "objects",
+            "permissive": "PERMISSIVE",
+            "policyname": "listing photos: update own files",
+            "schemaname": "storage",
+            "with_check": "((bucket_id = 'listing-photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))"
+        },
+        {
+            "cmd": "INSERT",
+            "qual": null,
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "objects",
+            "permissive": "PERMISSIVE",
+            "policyname": "listing photos: upload to own folder",
+            "schemaname": "storage",
+            "with_check": "((bucket_id = 'listing-photos'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))"
+        },
+        {
+            "cmd": "SELECT",
+            "qual": "((bucket_id = 'verification-documents'::text) AND (((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text) OR ( SELECT is_admin() AS is_admin)))",
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "objects",
+            "permissive": "PERMISSIVE",
+            "policyname": "verification documents: owner or admin can read",
+            "schemaname": "storage",
+            "with_check": null
+        },
+        {
+            "cmd": "INSERT",
+            "qual": null,
+            "roles": [
+                "authenticated"
+            ],
+            "tablename": "objects",
+            "permissive": "PERMISSIVE",
+            "policyname": "verification documents: upload to own folder",
+            "schemaname": "storage",
+            "with_check": "((bucket_id = 'verification-documents'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))"
+        }
+    ],
+    "triggers": [
+        {
+            "name": "profiles_clear_verification",
+            "table": "profiles",
+            "function": "CREATE OR REPLACE FUNCTION public.clear_verification_on_change()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  if old.verified_kind is not null and (\n       new.display_name is distinct from old.display_name\n    or new.business_name is distinct from old.business_name\n    or new.account_type is distinct from old.account_type) then\n    new.verified_kind := null;\n    new.verified_at := null;\n  end if;\n  return new;\nend;\n$function$\n",
+            "definition": "CREATE TRIGGER profiles_clear_verification BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION clear_verification_on_change()"
+        },
+        {
+            "name": "profiles_updated_at",
+            "table": "profiles",
+            "function": "CREATE OR REPLACE FUNCTION public.set_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n  new.updated_at = now();\n  return new;\nend;\n$function$\n",
+            "definition": "CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+        },
+        {
+            "name": "verification_prepare",
+            "table": "verification_submissions",
+            "function": "CREATE OR REPLACE FUNCTION public.prepare_verification()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare p record;\nbegin\n  select account_type, business_name, verified_kind into p from public.profiles where id = new.user_id;\n  if not found then raise exception 'Profile not found.'; end if;\n  if p.verified_kind is not null then raise exception 'Your account is already verified.'; end if;\n  if (new.kind = 'business') <> (p.account_type = 'business') then\n    raise exception 'The submission type must match your account type (individual or rental business).';\n  end if;\n  if new.kind = 'business' and p.business_name is null then\n    raise exception 'Add your business name to your profile first.';\n  end if;\n  if split_part(new.document_path, '/', 1) <> new.user_id::text then\n    raise exception 'The document must be uploaded to your own folder.';\n  end if;\n  if (select count(*) from public.verification_submissions where user_id = new.user_id and created_at > now() - interval '1 day') >= 5 then\n    raise exception 'You have sent several submissions today. Please try again tomorrow.';\n  end if;\n  new.status := 'pending';\n  new.admin_note := null;\n  new.reviewed_by := null;\n  new.reviewed_at := null;\n  return new;\nend;\n$function$\n",
+            "definition": "CREATE TRIGGER verification_prepare BEFORE INSERT ON verification_submissions FOR EACH ROW EXECUTE FUNCTION prepare_verification()"
+        }
+    ],
+    "functions": [
+        {
+            "name": "is_admin",
+            "grants": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "arguments": "",
+            "definition": "CREATE OR REPLACE FUNCTION public.is_admin()\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select exists (select 1 from public.admin_users where user_id = (select auth.uid()));\n$function$\n",
+            "security_definer": true
+        },
+        {
+            "name": "review_verification",
+            "grants": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "arguments": "p_submission_id uuid, p_action text, p_note text",
+            "definition": "CREATE OR REPLACE FUNCTION public.review_verification(p_submission_id uuid, p_action text, p_note text DEFAULT NULL::text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare uid uuid := (select auth.uid()); s record; note text := nullif(btrim(p_note), '');\nbegin\n  if not (select public.is_admin()) then raise exception 'Admins only.'; end if;\n  select * into s from public.verification_submissions where id = p_submission_id;\n  if not found then raise exception 'Submission not found.'; end if;\n  if s.status <> 'pending' then raise exception 'This submission has already been reviewed.'; end if;\n  if p_action = 'approve' then\n    update public.verification_submissions set status = 'approved', admin_note = note, reviewed_by = uid, reviewed_at = now() where id = s.id;\n    update public.profiles set verified_kind = s.kind, verified_at = now() where id = s.user_id;\n  elsif p_action = 'reject' then\n    if note is null then raise exception 'Please give a reason for rejecting.'; end if;\n    update public.verification_submissions set status = 'rejected', admin_note = note, reviewed_by = uid, reviewed_at = now() where id = s.id;\n  else\n    raise exception 'Unknown action.';\n  end if;\nend;\n$function$\n",
+            "security_definer": true
+        }
+    ],
+    "constraints": [
+        {
+            "name": "profiles_account_type_check",
+            "table": "profiles",
+            "definition": "CHECK (account_type = ANY (ARRAY['individual'::text, 'business'::text]))"
+        },
+        {
+            "name": "profiles_business_name_check",
+            "table": "profiles",
+            "definition": "CHECK (char_length(business_name) <= 120)"
+        },
+        {
+            "name": "profiles_check",
+            "table": "profiles",
+            "definition": "CHECK (account_type = 'business'::text OR business_name IS NULL)"
+        },
+        {
+            "name": "profiles_display_name_check",
+            "table": "profiles",
+            "definition": "CHECK (char_length(display_name) >= 1 AND char_length(display_name) <= 80)"
+        },
+        {
+            "name": "profiles_id_fkey",
+            "table": "profiles",
+            "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE"
+        },
+        {
+            "name": "profiles_pkey",
+            "table": "profiles",
+            "definition": "PRIMARY KEY (id)"
+        },
+        {
+            "name": "profiles_verification_consistent",
+            "table": "profiles",
+            "definition": "CHECK ((verified_kind IS NULL) = (verified_at IS NULL))"
+        },
+        {
+            "name": "profiles_verified_kind_check",
+            "table": "profiles",
+            "definition": "CHECK (verified_kind = ANY (ARRAY['identity'::text, 'business'::text]))"
+        },
+        {
+            "name": "verification_submissions_admin_note_check",
+            "table": "verification_submissions",
+            "definition": "CHECK (char_length(btrim(admin_note)) >= 1 AND char_length(btrim(admin_note)) <= 500)"
+        },
+        {
+            "name": "verification_submissions_check",
+            "table": "verification_submissions",
+            "definition": "CHECK (kind = 'identity'::text AND (document_type = ANY (ARRAY['government_id'::text, 'school_id'::text, 'other'::text])) OR kind = 'business'::text AND (document_type = ANY (ARRAY['business_registration'::text, 'other'::text])))"
+        },
+        {
+            "name": "verification_submissions_check1",
+            "table": "verification_submissions",
+            "definition": "CHECK (status = 'pending'::text OR reviewed_at IS NOT NULL)"
+        },
+        {
+            "name": "verification_submissions_details_check",
+            "table": "verification_submissions",
+            "definition": "CHECK (char_length(btrim(details)) >= 1 AND char_length(btrim(details)) <= 500)"
+        },
+        {
+            "name": "verification_submissions_document_path_key",
+            "table": "verification_submissions",
+            "definition": "UNIQUE (document_path)"
+        },
+        {
+            "name": "verification_submissions_document_type_check",
+            "table": "verification_submissions",
+            "definition": "CHECK (document_type = ANY (ARRAY['government_id'::text, 'school_id'::text, 'business_registration'::text, 'other'::text]))"
+        },
+        {
+            "name": "verification_submissions_kind_check",
+            "table": "verification_submissions",
+            "definition": "CHECK (kind = ANY (ARRAY['identity'::text, 'business'::text]))"
+        },
+        {
+            "name": "verification_submissions_pkey",
+            "table": "verification_submissions",
+            "definition": "PRIMARY KEY (id)"
+        },
+        {
+            "name": "verification_submissions_reviewed_by_fkey",
+            "table": "verification_submissions",
+            "definition": "FOREIGN KEY (reviewed_by) REFERENCES profiles(id)"
+        },
+        {
+            "name": "verification_submissions_status_check",
+            "table": "verification_submissions",
+            "definition": "CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))"
+        },
+        {
+            "name": "verification_submissions_user_id_fkey",
+            "table": "verification_submissions",
+            "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id)"
+        }
+    ],
+    "table_grants": [
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "is_grantable": "NO",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "is_grantable": "NO",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "is_grantable": "NO",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "DELETE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "DELETE"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "buckets",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "DELETE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "DELETE"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "objects",
+            "is_grantable": "NO",
+            "table_schema": "storage",
+            "privilege_type": "UPDATE"
+        }
+    ],
+    "column_grants": [
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "account_type",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "account_type",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "account_type",
+            "table_schema": "public",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "avatar_url",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "avatar_url",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "avatar_url",
+            "table_schema": "public",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "business_name",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "business_name",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "business_name",
+            "table_schema": "public",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "created_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "created_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "display_name",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "display_name",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "display_name",
+            "table_schema": "public",
+            "privilege_type": "UPDATE"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "id",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "id",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "updated_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "updated_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "verified_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "verified_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "anon",
+            "table_name": "profiles",
+            "column_name": "verified_kind",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "profiles",
+            "column_name": "verified_kind",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "admin_note",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "created_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "details",
+            "table_schema": "public",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "details",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "document_path",
+            "table_schema": "public",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "document_path",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "document_type",
+            "table_schema": "public",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "document_type",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "id",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "kind",
+            "table_schema": "public",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "kind",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "reviewed_at",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "reviewed_by",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "status",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "user_id",
+            "table_schema": "public",
+            "privilege_type": "INSERT"
+        },
+        {
+            "grantee": "authenticated",
+            "table_name": "verification_submissions",
+            "column_name": "user_id",
+            "table_schema": "public",
+            "privilege_type": "SELECT"
+        }
+    ],
+    "verification_bucket": [
+        {
+            "id": "verification-documents",
+            "public": false,
+            "file_size_limit": 5242880,
+            "allowed_mime_types": [
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+                "application/pdf"
+            ]
+        }
+    ]
+}

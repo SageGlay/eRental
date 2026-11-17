@@ -2,6 +2,8 @@
 
 A React marketplace prototype for renting and listing items and properties in Iligan City. One account can rent and own listings. Supabase provides authentication, Postgres/RLS and photo storage; payments are simulated.
 
+Detailed guides: [Local setup and testing](LOCAL_SETUP_AND_TESTING.md), [verification contract export and acceptance tests](VERIFICATION_TESTING.md), and [current milestone status](MILESTONE_STATUS.md).
+
 ## Develop
 
 Use Node.js 22 or newer (Node 24 and npm 11 were validated).
@@ -41,12 +43,13 @@ These tests validate frontend behavior against controlled API responses. They do
 - Keyword/category/text-location/price search and sorting.
 - Rental requests, owner decisions, booking schedule/history, simulated payments and reviews.
 - Text conversations, unread message counts, listing reports and administrator report resolution.
+- Private individual/business verification requests, administrator approval/rejection, and protected-profile verified badges.
 
 The existing architecture is in `src/pages`, `src/components`, `src/hooks`, `src/context` and `src/lib`; visual tokens live in `src/styles/tokens.css`.
 
 ## Supabase schema and live validation
 
-The checked-in migration records the foundation tables, privileges/RLS, category seed and `listing-photos` bucket. It does not contain the later definitions used by bookings, conversations/messages, reviews, reports, simulated payments or search/availability/resolution RPCs. Obtain and review the deployed definitions before proposing schema changes. Do not replay the foundation migration against an existing project as a repair.
+The checked-in migration records the foundation tables, privileges/RLS, category seed and `listing-photos` bucket. It does not contain the later definitions used by bookings, conversations/messages, reviews, reports, simulated payments or search/availability/resolution RPCs. The separately exported verification definitions are recorded in `supabase/contracts/verification.json`; later booking/messaging/search definitions still need repository records. Review deployed definitions before proposing schema changes. Do not replay the foundation migration against an existing project as a repair.
 
 Live verification also requires network access to the configured project hostname and appropriate test users. Preserve database enforcement: frontend route checks and date checks are usability defenses, not substitutes for RLS, transactional booking constraints or authorized RPCs.
 

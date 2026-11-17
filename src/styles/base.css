@@ -1,4 +1,11 @@
 *, *::before, *::after { box-sizing: border-box; }
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: var(--r-sm); }
+*::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+*::-webkit-scrollbar-thumb:active { background: var(--muted); }
+@media (forced-colors: active) { * { scrollbar-color: auto; } *::-webkit-scrollbar-thumb { background: CanvasText; } *::-webkit-scrollbar-track { background: Canvas; } }
 html { scroll-padding-top: calc(var(--nav-h) + 12px); }
 body { margin: 0; font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { margin: 0 0 var(--s3); line-height: 1.2; letter-spacing: -0.02em; }

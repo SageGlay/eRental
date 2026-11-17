@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import LoadError from '../components/LoadError.jsx'
+import { Link } from 'react-router-dom'
+import VerifiedBadge from '../components/VerifiedBadge.jsx'
 
 function ProfileForm({ user, profile, onSaved }) {
   const [displayName, setDisplayName] = useState(profile.display_name)
@@ -43,6 +45,7 @@ function ProfileForm({ user, profile, onSaved }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
+      <p className="field__hint">Changing your display name, business name or account type clears an existing verification and requires a new review.</p>
       <div className="field">
         <label htmlFor="displayName">Display name</label>
         <input id="displayName" type="text" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
@@ -80,6 +83,8 @@ export default function ProfilePage() {
       <div className="auth__card">
         <h1>My profile</h1>
         <p className="auth__sub">{user.email}</p>
+        <VerifiedBadge profile={!profileLoading && !profileError ? profile : null} />
+        <p><Link to="/verification">Account verification</Link></p>
         {profileError && <LoadError onRetry={refreshProfile}>{profileError}</LoadError>}
         {profile ? <ProfileForm key={user.id} user={user} profile={profile} onSaved={refreshProfile} /> : profileLoading ? <p aria-busy="true">Loading your profile…</p> : null}
       </div>

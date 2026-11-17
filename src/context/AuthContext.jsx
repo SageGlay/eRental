@@ -53,7 +53,7 @@ export function AuthProvider({ children }) {
     setProfileState((s) => ({ userId, session: auth.session, data: s.userId === userId ? s.data : null, loading: true, error: null }))
     ;(async () => {
       try {
-        const { data, error } = await supabase.from('profiles').select('id, display_name, avatar_url, account_type, business_name')
+        const { data, error } = await supabase.from('profiles').select('id, display_name, avatar_url, account_type, business_name, verified_kind, verified_at')
           .eq('id', userId).maybeSingle().abortSignal(controller.signal)
         if (error) throw error
         if (active) setProfileState({ userId, session: auth.session, data, loading: false, error: data ? null : 'Your profile isn’t available. Try again or contact the project administrator.' })

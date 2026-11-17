@@ -1,0 +1,14 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["src"],
+  "locale": "en-PH",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Date", "Form", "Scrollbar", "CRUD"],
+  "ownership": { "Select/Listbox": "native", "Date": "native" },
+  "requiredCommands": ["browser", "build"],
+  "commands": { "browser": "npm test", "build": "npm run build" },
+  "evidence": {
+    "crudFullFlow": "tests/e2e/verification.spec.js",
+    "failurePaths": "tests/e2e/verification.spec.js"
+  }
+}

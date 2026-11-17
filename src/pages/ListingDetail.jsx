@@ -12,8 +12,9 @@ import RequestForm from '../components/RequestForm.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import LoadError from '../components/LoadError.jsx'
 import { useListingRecord } from '../hooks/useListingRecord.js'
+import VerifiedBadge from '../components/VerifiedBadge.jsx'
 
-const FIELDS = 'id, owner_id, title, description, price, price_period, deposit, location_text, terms, details, status, created_at, categories(name, slug), listing_photos(storage_path, sort_order), profiles(display_name, account_type, business_name, created_at)'
+const FIELDS = 'id, owner_id, title, description, price, price_period, deposit, location_text, terms, details, status, created_at, categories(name, slug), listing_photos(storage_path, sort_order), profiles(display_name, account_type, business_name, created_at, verified_kind, verified_at)'
 
 export default function ListingDetail() {
   const { id } = useParams()
@@ -74,6 +75,7 @@ export default function ListingDetail() {
           <div className="owner-card">
             <p className="detail__meta">Listed by</p>
             <strong>{owner?.account_type === 'business' && owner.business_name ? owner.business_name : owner?.display_name}</strong>
+            <VerifiedBadge profile={owner} />
             {owner?.account_type === 'business' && <span className="badge badge--inline">Rental business</span>}
             <OwnerRating ownerId={listing.owner_id} />
             <p className="detail__meta">Member since {owner ? formatDate(owner.created_at) : ''}</p>

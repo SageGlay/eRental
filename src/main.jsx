@@ -7,6 +7,7 @@ import './styles/base.css'
 import './styles/app.css'
 import './styles/auth.css'
 import './styles/listings.css'
+import './styles/verification.css'
 import { AuthProvider } from './context/AuthContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
