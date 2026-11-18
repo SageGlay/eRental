@@ -1,9 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Only PUBLIC values belong here. VITE_ variables are visible in the browser.
-const url = import.meta.env.VITE_SUPABASE_URL
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY
+function initializeSupabase(config) {
+  if (config.error) return config
 
-export const isSupabaseConfigured = Boolean(url && key)
-// null when .env is missing, so the app can show a helpful message instead of crashing.
-export const supabase = isSupabaseConfigured ? createClient(url, key) : null
+  try {
+    return { client: createClient(config.url, config.key) }
+  } catch {
+    return {
+      error:
+        'Supabase could not start. Check the project URL and public key in your app settings.',
+    }
+  }
+}
+
+export const {
+  client: supabase = null,
+  error: supabaseConfigurationError = null,
+} = initializeSupabase(__ERENTAL_SUPABASE_CONFIG__)
+export const isSupabaseConfigured = Boolean(supabase)
