@@ -122,6 +122,8 @@ for (const [label, target] of [
     await expect(page.locator(`.status--${target}`)).toHaveText(
       target === 'accepted' ? 'Confirmed' : 'Declined',
     )
+    await expect(page.getByRole('heading', { name: 'Your incoming requests' })).toBeFocused()
+    await expect(page.getByText(`Booking updated: ${target === 'accepted' ? 'Confirmed' : 'Declined'}.`)).toBeVisible()
     const update = calls(model, '/rest/v1/bookings', 'PATCH')[0]
     expect(update.body).toEqual({ status: target })
     expect(update.search).toContain(`id=eq.${BOOKING_ID}`)
