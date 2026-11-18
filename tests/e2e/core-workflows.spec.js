@@ -115,8 +115,10 @@ for (const [label, target] of [
     )
     await page.goto('/bookings?tab=incoming')
     await page.getByRole('button', { name: label, exact: true }).click()
-    if (label === 'Decline')
-      await page.getByRole('button', { name: 'Yes', exact: true }).click()
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: label, exact: true })
+      .click()
     await expect(page.locator(`.status--${target}`)).toHaveText(
       target === 'accepted' ? 'Confirmed' : 'Declined',
     )
@@ -147,6 +149,10 @@ test('simulated payment uses the existing RPC and refreshes paid records', async
   })
   await page.goto('/bookings')
   await page.getByRole('button', { name: /^Pay .*\(simulated\)$/ }).click()
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Simulate payment', exact: true })
+    .click()
   await expect(
     page.getByText('Paid (simulated) · ₱450', { exact: true }),
   ).toBeVisible()
