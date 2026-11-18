@@ -31,7 +31,7 @@ export default function ReviewForm({ bookingId, onDone }) {
     <form className="review-form" onSubmit={handleSubmit} noValidate>
       <StarInput value={rating} onChange={setRating} />
       <label htmlFor={`comment-${bookingId}`} className="sr-only">Comment (optional)</label>
-      <textarea id={`comment-${bookingId}`} maxLength={1000} placeholder="How was the rental? (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
+      <textarea className="resize-none" id={`comment-${bookingId}`} maxLength={1000} placeholder="How was the rental? (optional)" value={comment} onChange={(e) => setComment(e.target.value)} />
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="booking__actions">
         <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Submit review'}</button>

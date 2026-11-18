@@ -1,23 +1,74 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { formatPrice, formatRate } from '../lib/format.js'
-import { STATUS_LABELS, estimateAmounts, formatRange, setBookingStatus, today } from '../lib/bookings.js'
+import {
+  STATUS_LABELS,
+  estimateAmounts,
+  formatRange,
+  setBookingStatus,
+  today,
+} from '../lib/bookings.js'
 import { StarRating } from '../components/Stars.jsx'
 import ReviewForm from '../components/ReviewForm.jsx'
 import { startConversation } from '../lib/messages.js'
 import EmptyState from '../components/EmptyState.jsx'
+import LoadError from '../components/LoadError.jsx'
+import Dialog from '../components/Dialog.jsx'
+import PageHeading from '../components/PageHeading.jsx'
+import Icon from '../components/Icon.jsx'
+import '../styles/bookings.css'
 
-const SELECT = 'id, status, start_date, end_date, message, owner_response, price, price_period, deposit, simulated_payments(kind, amount, status), reviews(rating, comment), listings(id, title), renter:profiles!bookings_renter_id_fkey(display_name)'
+const SELECT =
+  'id, status, start_date, end_date, message, owner_response, price, price_period, deposit, simulated_payments(kind, amount, status), reviews(rating, comment), listings(id, title), renter:profiles!bookings_renter_id_fkey(display_name)'
+const STATUSES = Object.keys(STATUS_LABELS)
+const CONFIRMATION = {
+  accepted: {
+    title: 'Accept this rental request?',
+    action: 'Accept',
+    description:
+      'This confirms the requested dates for your listing. The renter can then simulate payment and arrange the handover with you.',
+  },
+  rejected: {
+    title: 'Decline this request?',
+    action: 'Decline',
+    description:
+      'The renter will see that their request was declined. This does not create a confirmed booking.',
+  },
+  cancelled: {
+    title: 'Cancel this rental request?',
+    action: 'Cancel request',
+    description:
+      'This request will be marked as cancelled. You will need to send a new request if you want to rent it later.',
+  },
+  completed: {
+    title: 'Mark this rental completed?',
+    action: 'Mark completed',
+    description:
+      'The rental will move to your history. The renter can then leave a review.',
+  },
+}
 
 function useBookings(column, userId) {
   const [state, setState] = useState({ rows: [], loading: true, error: null })
   const load = useCallback(() => {
-    supabase.from('bookings').select(SELECT).eq(column, userId).order('created_at', { ascending: false })
-      .then(({ data, error }) => setState({ rows: data ?? [], loading: false, error: error ? error.message : null }))
+    supabase
+      .from('bookings')
+      .select(SELECT)
+      .eq(column, userId)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) =>
+        setState({
+          rows: data ?? [],
+          loading: false,
+          error: error ? error.message : null,
+        }),
+      )
   }, [column, userId])
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
   return { ...state, reload: load }
 }
 
@@ -25,6 +76,9 @@ function BookingCard({ b, role, onChange }) {
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const busyRef = useRef(false)
+  const titleRef = useRef(null)
   const { user } = useAuth()
   const navigate = useNavigate()
   const isOwner = role === 'owner'
@@ -37,83 +91,333 @@ function BookingCard({ b, role, onChange }) {
   const canPay = !isOwner && b.status === 'accepted' && payments.length === 0
   const actions = []
   if (b.status === 'pending') {
-    if (isOwner) actions.push(['Accept', 'accepted', false], ['Decline', 'rejected', true])
+    if (isOwner)
+      actions.push(['Accept', 'accepted', true], ['Decline', 'rejected', true])
     else actions.push(['Cancel request', 'cancelled', true])
   }
   if (b.status === 'accepted') {
-    if (b.start_date > today()) actions.push(['Cancel booking', 'cancelled', true])
-    if (isOwner && b.end_date <= today()) actions.push(['Mark completed', 'completed', false])
+    if (b.start_date > today())
+      actions.push(['Cancel booking', 'cancelled', true])
+    if (isOwner && b.end_date <= today())
+      actions.push(['Mark completed', 'completed', true])
+  }
+
+  function begin() {
+    if (busyRef.current) return false
+    busyRef.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
+    return true
+  }
+
+  function finish() {
+    busyRef.current = false
+    setBusy(false)
   }
 
   async function messageOwner() {
-    setBusy(true)
-    setError('')
-    const result = await startConversation(b.listings.id, user.id)
-    setBusy(false)
-    if (result.error) return setError(result.error)
-    navigate(`/messages/${result.id}`)
+    if (!begin()) return
+    try {
+      const result = await startConversation(b.listings.id, user.id)
+      if (result.error) return setError(result.error)
+      navigate(`/messages/${result.id}`)
+    } catch (err) {
+      setError(err?.message || 'We couldn’t open the conversation. Try again.')
+    } finally {
+      finish()
+    }
   }
 
   async function pay() {
-    setBusy(true)
-    setError('')
-    const { error: payError } = await supabase.rpc('simulate_payment', { p_booking_id: b.id })
-    setBusy(false)
-    if (payError) return setError(payError.message)
-    onChange()
+    if (!begin()) return
+    try {
+      const { error: payError } = await supabase.rpc('simulate_payment', {
+        p_booking_id: b.id,
+      })
+      if (payError) return setError(payError.message)
+      setConfirm(null)
+      setNotice('Payment simulation completed. No real money was charged.')
+      onChange()
+      requestAnimationFrame(() => titleRef.current?.focus())
+    } catch (err) {
+      setError(
+        err?.message ||
+          'We couldn’t confirm the payment simulation. Refresh before trying again.',
+      )
+    } finally {
+      finish()
+    }
   }
 
   async function act(status) {
-    setBusy(true)
+    if (!begin()) return
+    try {
+      const message = await setBookingStatus(b.id, status)
+      if (message) return setError(message)
+      setConfirm(null)
+      setNotice(`Booking updated: ${STATUS_LABELS[status]}.`)
+      onChange()
+      requestAnimationFrame(() => titleRef.current?.focus())
+    } catch (err) {
+      setError(err?.message || 'We couldn’t update this booking. Try again.')
+    } finally {
+      finish()
+    }
+  }
+
+  function ask(label, status) {
     setError('')
-    const message = await setBookingStatus(b.id, status)
-    setBusy(false)
-    setConfirm(null)
-    if (message) return setError(message)
-    onChange()
+    setConfirm({
+      ...CONFIRMATION[status],
+      status,
+      action: label,
+      ...(status === 'cancelled' && b.status === 'accepted'
+        ? {
+            title: 'Cancel this booking?',
+            description:
+              'This confirmed booking will be cancelled. Any payment records are simulated; no real funds are transferred.',
+          }
+        : {}),
+    })
+  }
+
+  function askPayment() {
+    setError('')
+    setConfirm({
+      status: 'simulate_payment',
+      title: 'Simulate this payment?',
+      action: 'Simulate payment',
+      description:
+        'This creates a simulated payment record for your booking. No real money is charged or transferred, and no card details are collected.',
+    })
   }
 
   return (
-    <li className="booking">
-      <div className="booking__main">
-        <Link to={`/listings/${b.listings?.id}`}><strong>{b.listings?.title}</strong></Link>
-        <span>{formatRange(b.start_date, b.end_date)} · {formatRate(b.price, b.price_period)}</span>
-        {isOwner && <span>Requested by {b.renter?.display_name}</span>}
-        {b.message && <span className="booking__note">“{b.message}”</span>}
-        {b.owner_response && <span className="booking__note">Note: {b.owner_response}</span>}
-        <span className={`status status--${b.status}`}>{STATUS_LABELS[b.status]}</span>
-        {paid.length > 0 && <span className="status status--completed">{isOwner ? 'Renter paid' : 'Paid'} (simulated) · {formatPrice(sum(paid))}</span>}
-        {refunded.length > 0 && <span className="status status--cancelled">Refunded (simulated) · {formatPrice(sum(refunded))}</span>}
-        {canPay && (
-          <span className="payment-box">
-            Simulated payment: rental {formatPrice(estimate.rental)} + deposit {formatPrice(estimate.deposit)} = <strong>{formatPrice(estimate.total)}</strong>. No real money is charged.
+    <li className="booking booking-card">
+      <div className="booking-card__content">
+        <header className="booking-card__heading">
+          <div>
+            <p className="booking-card__eyebrow">
+              {isOwner ? 'Request for your listing' : 'Your rental request'}
+            </p>
+            <h3>
+              <Link ref={titleRef} to={`/listings/${b.listings?.id}`}>
+                {b.listings?.title || 'Listing no longer available'}
+              </Link>
+            </h3>
+          </div>
+          <span className={`status status--${b.status}`}>
+            {STATUS_LABELS[b.status]}
           </span>
+        </header>
+        <dl className="booking-card__details">
+          <div>
+            <dt>
+              <Icon name="calendar" size={16} /> Rental dates
+            </dt>
+            <dd>{formatRange(b.start_date, b.end_date)}</dd>
+          </div>
+          <div>
+            <dt>Rental rate</dt>
+            <dd>{formatRate(b.price, b.price_period)}</dd>
+          </div>
+          {isOwner && (
+            <div>
+              <dt>
+                <Icon name="user" size={16} /> Requested by
+              </dt>
+              <dd>{b.renter?.display_name || 'Renter'}</dd>
+            </div>
+          )}
+        </dl>
+        {b.message && (
+          <blockquote className="booking-card__note">
+            <span>Request message</span>
+            <p>“{b.message}”</p>
+          </blockquote>
+        )}
+        {b.owner_response && (
+          <div className="booking-card__note">
+            <span>Owner’s note</span>
+            <p>{b.owner_response}</p>
+          </div>
+        )}
+        {(paid.length > 0 || refunded.length > 0) && (
+          <div className="booking-card__payments">
+            {paid.length > 0 && (
+              <span className="status status--completed">
+                {isOwner ? 'Renter paid' : 'Paid'} (simulated) ·{' '}
+                {formatPrice(sum(paid))}
+              </span>
+            )}
+            {refunded.length > 0 && (
+              <span className="status status--cancelled">
+                Refunded (simulated) · {formatPrice(sum(refunded))}
+              </span>
+            )}
+          </div>
+        )}
+        {canPay && (
+          <div className="booking-card__estimate">
+            <div>
+              <span>Rental estimate</span>
+              <strong>{formatPrice(estimate.rental)}</strong>
+            </div>
+            <div>
+              <span>Deposit</span>
+              <strong>{formatPrice(estimate.deposit)}</strong>
+            </div>
+            <div className="booking-card__total">
+              <span>Simulated payment total</span>
+              <strong>{formatPrice(estimate.total)}</strong>
+            </div>
+            <p>No real money is charged. This is a payment simulation.</p>
+          </div>
         )}
         {b.status === 'completed' && review && (
-          <span className="booking__note"><StarRating value={review.rating} /> {isOwner ? 'Renter’s review' : 'Your review'}{review.comment ? `: “${review.comment}”` : ''}</span>
+          <div className="booking-card__review">
+            <StarRating value={review.rating} />
+            <p>
+              {isOwner ? 'Renter’s review' : 'Your review'}
+              {review.comment ? `: “${review.comment}”` : ''}
+            </p>
+          </div>
         )}
-        {b.status === 'completed' && !review && !isOwner && <ReviewForm bookingId={b.id} onDone={onChange} />}
-        {!isOwner && b.listings && <button type="button" className="btn btn-ghost" disabled={busy} onClick={messageOwner}>Message owner</button>}
-        {error && <span className="form-error" role="alert">{error}</span>}
+        {b.status === 'completed' && !review && !isOwner && (
+          <div className="booking-card__review">
+            <ReviewForm bookingId={b.id} onDone={onChange} />
+          </div>
+        )}
+        {notice && (
+          <p className="form-success" role="status">
+            {notice}
+          </p>
+        )}
+        {error && !confirm && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
       </div>
-      {(actions.length > 0 || canPay) && (
+      <footer className="booking-card__footer">
+        <Link className="btn btn-ghost" to={`/listings/${b.listings?.id}`}>
+          View listing
+          <Icon name="arrowRight" size={16} />
+        </Link>
         <div className="booking__actions">
-          {confirm ? (
-            <>
-              <span>Are you sure?</span>
-              <button type="button" className="btn btn-danger" disabled={busy} onClick={() => act(confirm)}>Yes</button>
-              <button type="button" className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
-            </>
-          ) : (
-            <>
-              {canPay && <button type="button" className="btn btn-primary" disabled={busy} onClick={pay}>Pay {formatPrice(estimate.total)} (simulated)</button>}
-              {actions.map(([label, status, needsConfirm]) => (
-                <button key={status} type="button" disabled={busy} className={needsConfirm ? 'btn btn-ghost' : 'btn btn-primary'}
-                  onClick={() => (needsConfirm ? setConfirm(status) : act(status))}>{label}</button>
-              ))}
-            </>
+          {!isOwner && b.listings && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={busy}
+              onClick={messageOwner}
+            >
+              <Icon name="message" size={16} />
+              Message owner
+            </button>
           )}
+          {canPay && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busy}
+              onClick={askPayment}
+            >
+              Pay {formatPrice(estimate.total)} (simulated)
+            </button>
+          )}
+          {actions.map(([label, status, needsConfirm]) => (
+            <button
+              key={status}
+              type="button"
+              disabled={busy}
+              className={
+                status === 'accepted' || status === 'completed'
+                  ? 'btn btn-primary'
+                  : 'btn btn-ghost'
+              }
+              onClick={() => (needsConfirm ? ask(label, status) : act(status))}
+            >
+              {label}
+            </button>
+          ))}
         </div>
+      </footer>
+      {confirm && (
+        <Dialog
+          title={confirm.title}
+          busy={busy}
+          onClose={() => setConfirm(null)}
+        >
+          <p className="booking-confirm__listing">{b.listings?.title}</p>
+          <p className="detail__meta">
+            {formatRange(b.start_date, b.end_date)}
+          </p>
+          <p>{confirm.description}</p>
+          {confirm.status === 'accepted' && (
+            <dl className="booking-card__details booking-confirm__details">
+              <div>
+                <dt>Rental rate</dt>
+                <dd>{formatRate(b.price, b.price_period)}</dd>
+              </div>
+              {b.deposit != null && (
+                <div>
+                  <dt>Deposit</dt>
+                  <dd>{formatPrice(b.deposit)}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+          {confirm.status === 'simulate_payment' && (
+            <div className="booking-card__estimate">
+              <div>
+                <span>Rental estimate</span>
+                <strong>{formatPrice(estimate.rental)}</strong>
+              </div>
+              <div>
+                <span>Deposit</span>
+                <strong>{formatPrice(estimate.deposit)}</strong>
+              </div>
+              <div className="booking-card__total">
+                <span>Simulated payment total</span>
+                <strong>{formatPrice(estimate.total)}</strong>
+              </div>
+              <p>No real money is charged. This is a payment simulation.</p>
+            </div>
+          )}
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="booking-confirm__actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={busy}
+              onClick={() => setConfirm(null)}
+            >
+              Go back
+            </button>
+            <button
+              type="button"
+              className={`btn ${['accepted', 'completed', 'simulate_payment'].includes(confirm.status) ? 'btn-primary' : 'btn-danger'}`}
+              disabled={busy}
+              onClick={() =>
+                confirm.status === 'simulate_payment'
+                  ? pay()
+                  : act(confirm.status)
+              }
+            >
+              {busy
+                ? confirm.status === 'simulate_payment'
+                  ? 'Simulating…'
+                  : 'Updating…'
+                : confirm.action}
+            </button>
+          </div>
+        </Dialog>
       )}
     </li>
   )
@@ -123,32 +427,137 @@ function Section({ title, rows, role, onChange }) {
   if (rows.length === 0) return null
   return (
     <div className="bookings-section">
-      <h2>{title} ({rows.length})</h2>
-      <ul className="bookings">{rows.map((b) => <BookingCard key={b.id} b={b} role={role} onChange={onChange} />)}</ul>
+      <h2>
+        {title} <span className="bookings-section__count">{rows.length}</span>
+      </h2>
+      <ul className="bookings">
+        {rows.map((b) => (
+          <BookingCard key={b.id} b={b} role={role} onChange={onChange} />
+        ))}
+      </ul>
     </div>
   )
 }
 
-function Panel({ role, userId }) {
+function Panel({ role, userId, status, onStatusChange }) {
   const isOwner = role === 'owner'
-  const { rows, loading, error, reload } = useBookings(isOwner ? 'owner_id' : 'renter_id', userId)
-  if (loading) return <p aria-busy="true">Loading…</p>
-  if (error) return <p className="form-error" role="alert">We couldn’t load your bookings ({error}).</p>
+  const { rows, loading, error, reload } = useBookings(
+    isOwner ? 'owner_id' : 'renter_id',
+    userId,
+  )
+  if (loading)
+    return (
+      <div className="bookings-loading" role="status" aria-busy="true">
+        <Icon name="calendar" size={28} />
+        <p>Loading your bookings…</p>
+      </div>
+    )
+  if (error)
+    return (
+      <LoadError onRetry={reload}>
+        We couldn’t load your bookings ({error}).
+      </LoadError>
+    )
   if (rows.length === 0) {
     return (
-      <EmptyState icon="📅" title={isOwner ? 'No requests yet' : 'No requests yet'}
-        action={isOwner ? <Link className="btn btn-primary" to="/my-listings">My listings</Link> : <Link className="btn btn-primary" to="/listings">Browse rentals</Link>}>
-        {isOwner ? 'When renters request your listings, they will show up here.' : 'Requests you send to owners will show up here with their status.'}
+      <EmptyState
+        icon={<Icon name="calendar" size={32} />}
+        title="No requests yet"
+        action={
+          isOwner ? (
+            <Link className="btn btn-primary" to="/my-listings">
+              My listings
+            </Link>
+          ) : (
+            <Link className="btn btn-primary" to="/listings">
+              Browse rentals
+            </Link>
+          )
+        }
+      >
+        {isOwner
+          ? 'When renters request your listings, they will show up here.'
+          : 'Requests you send to owners will show up here with their status.'}
       </EmptyState>
     )
   }
-  if (!isOwner) return <ul className="bookings">{rows.map((b) => <BookingCard key={b.id} b={b} role="renter" onChange={reload} />)}</ul>
-  const confirmed = rows.filter((b) => b.status === 'accepted').sort((a, b) => a.start_date.localeCompare(b.start_date))
+  const filtered = status ? rows.filter((b) => b.status === status) : rows
+  const confirmed = filtered
+    .filter((b) => b.status === 'accepted')
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
   return (
     <>
-      <Section title="Pending requests" rows={rows.filter((b) => b.status === 'pending')} role="owner" onChange={reload} />
-      <Section title="Confirmed bookings (schedule)" rows={confirmed} role="owner" onChange={reload} />
-      <Section title="History" rows={rows.filter((b) => !['pending', 'accepted'].includes(b.status))} role="owner" onChange={reload} />
+      <div className="bookings-toolbar">
+        <div>
+          <h2>{isOwner ? 'Your incoming requests' : 'Your rental activity'}</h2>
+          <p>
+            {isOwner
+              ? 'Review requests and keep track of your rental schedule.'
+              : 'Follow your requests, arrange details and review completed rentals.'}
+          </p>
+        </div>
+        <div className="field">
+          <label htmlFor="booking-status">Filter bookings</label>
+          <select
+            id="booking-status"
+            value={status}
+            onChange={(e) => onStatusChange(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((value) => (
+              <option value={value} key={value}>
+                {STATUS_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<Icon name="calendar" size={32} />}
+          title="No bookings with this status"
+          action={
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => onStatusChange('')}
+            >
+              Show all bookings
+            </button>
+          }
+        >
+          Choose another status to see your other rental activity.
+        </EmptyState>
+      ) : !isOwner ? (
+        <ul className="bookings">
+          {filtered.map((b) => (
+            <BookingCard key={b.id} b={b} role="renter" onChange={reload} />
+          ))}
+        </ul>
+      ) : (
+        <>
+          <Section
+            title="Pending requests"
+            rows={filtered.filter((b) => b.status === 'pending')}
+            role="owner"
+            onChange={reload}
+          />
+          <Section
+            title="Confirmed bookings (schedule)"
+            rows={confirmed}
+            role="owner"
+            onChange={reload}
+          />
+          <Section
+            title="History"
+            rows={filtered.filter(
+              (b) => !['pending', 'accepted'].includes(b.status),
+            )}
+            role="owner"
+            onChange={reload}
+          />
+        </>
+      )}
     </>
   )
 }
@@ -157,15 +566,95 @@ export default function BookingsPage() {
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'incoming' ? 'incoming' : 'mine'
+  const status = STATUSES.includes(params.get('status'))
+    ? params.get('status')
+    : ''
+  const tabsRef = useRef([])
+
+  function changeTab(next) {
+    setParams(next === 'incoming' ? { tab: 'incoming' } : {})
+  }
+
+  function tabKey(e, index) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+    e.preventDefault()
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? 1 : 1 - index
+    changeTab(next ? 'incoming' : 'mine')
+    tabsRef.current[next]?.focus()
+  }
+
+  function changeStatus(value) {
+    const next = new URLSearchParams(params)
+    if (value) next.set('status', value)
+    else next.delete('status')
+    setParams(next)
+  }
+
   return (
-    <section className="container page">
-      <h1>Bookings</h1>
-      <p className="notice">Payments in eRental are simulated. No real money is charged and no card details are collected.</p>
-      <div className="tabs" role="tablist">
-        <button type="button" role="tab" aria-selected={tab === 'mine'} onClick={() => setParams({})}>My requests</button>
-        <button type="button" role="tab" aria-selected={tab === 'incoming'} onClick={() => setParams({ tab: 'incoming' })}>Requests for my listings</button>
+    <section className="container page bookings-page">
+      <PageHeading
+        eyebrow="Renting & hosting"
+        title="Bookings"
+        actions={
+          <Link to="/listings" className="btn btn-ghost">
+            Explore rentals
+            <Icon name="arrowRight" size={16} />
+          </Link>
+        }
+      >
+        <p>
+          From the first request to the final handover, keep your rentals in
+          view.
+        </p>
+      </PageHeading>
+      <div
+        className="tabs bookings-tabs"
+        role="tablist"
+        aria-label="Booking views"
+      >
+        {[
+          ['mine', 'My requests', 'key'],
+          ['incoming', 'Requests for my listings', 'home'],
+        ].map(([value, label, icon], index) => (
+          <button
+            key={value}
+            ref={(el) => {
+              tabsRef.current[index] = el
+            }}
+            id={`booking-tab-${value}`}
+            type="button"
+            role="tab"
+            aria-selected={tab === value}
+            tabIndex={tab === value ? 0 : -1}
+            aria-controls="booking-panel"
+            onKeyDown={(e) => tabKey(e, index)}
+            onClick={() => changeTab(value)}
+          >
+            <Icon name={icon} size={18} />
+            {label}
+          </button>
+        ))}
       </div>
-      <Panel key={tab} role={tab === 'incoming' ? 'owner' : 'renter'} userId={user.id} />
+      <div className="bookings-simulation">
+        <Icon name="shield" size={20} />
+        <p>
+          <strong>Simulated payments only.</strong> No real money is charged and
+          no card details are collected.
+        </p>
+      </div>
+      <div
+        id="booking-panel"
+        role="tabpanel"
+        aria-labelledby={`booking-tab-${tab}`}
+      >
+        <Panel
+          key={tab}
+          role={tab === 'incoming' ? 'owner' : 'renter'}
+          userId={user.id}
+          status={status}
+          onStatusChange={changeStatus}
+        />
+      </div>
     </section>
   )
 }
