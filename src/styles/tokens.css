@@ -1,30 +1,36 @@
-/* Design tokens: change these to restyle the whole app. */
+/* Canonical eRental 2.0 runtime tokens. DESIGN.md documents this owner. */
 :root {
-  --primary: #0f766e;
-  --primary-dark: #115e59;
-  --primary-soft: #e6f4f2;
-  --accent: #f59e0b;
-  --focus: #1d4ed8;
-  --bg: #ffffff;
-  --surface: #f8fafc;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --muted: #475569;
-  --danger-text: #991b1b;
-  --scrollbar-thumb: #94a3b8;
-  --scrollbar-track: var(--surface);
-  --scrollbar-hover: #64748b;
-  --overlay: rgb(15 23 42 / 0.5);
-
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-
-  --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem;
-  --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
-
-  --r-sm: 8px; --r-md: 12px; --r-lg: 20px;
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 6px 18px rgb(15 23 42 / 0.08);
-
-  --container: 1120px;
-  --nav-h: 64px;
-  --photo-size: 6rem;
+  --green-velvet: #29281e; --golden-sandalwood: #857861; --almond-light: #e7d4bb; --plum-wine: #48252f; --carbon-powder: #101211;
+  --bg: #faf7f2; --surface: #f0ebe3; --surface-elevated: #fffdf9;
+  --text: #101211; --muted: #645b50; --border: #ddd5c9; --input-border: #8a8175;
+  --primary: #48252f; --primary-dark: #311820; --primary-soft: #f0e5e8; --on-primary: #fff8ef;
+  --accent: #857861; --focus: #78445a; --input-bg: #fffdf9; --disabled-bg: #e5dfd6;
+  --success-bg: #e7efe6; --success-text: #28542d; --success-border: #a9bba4;
+  --warning-bg: #f6ecd4; --warning-text: #684b13; --warning-border: #b8a16d;
+  --danger-bg: #f7e9e6; --danger-text: #912f2b; --danger-border: #ca9c97; --danger: #922f2b; --on-danger: #fff8ef;
+  --info-bg: #e8edf1; --info-text: #34556d;
+  --hero-bg: #e7d4bb; --hero-text: #29281e; --hero-muted: #5e5140;
+  --footer-bg: #29281e; --footer-text: #eee4d6; --footer-muted: #c5b9a6; --footer-border: #5f5a4b;
+  --scrollbar-thumb: #9a8d7b; --scrollbar-track: var(--surface); --scrollbar-hover: #75644e; --overlay: rgb(16 18 17 / .65);
+  --shadow: 0 4px 16px rgb(41 40 30 / .06), 0 16px 48px rgb(41 40 30 / .05); --shadow-sm: 0 2px 8px rgb(41 40 30 / .05);
+  --font: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'DM Sans Variable', 'Manrope Variable', system-ui, sans-serif;
+  --s1: .25rem; --s2: .5rem; --s3: .75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
+  --r-sm: 12px; --r-md: 20px; --r-lg: 28px; --container: 1320px; --nav-h: 80px; --photo-size: 6rem;
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  --bg: #101211; --surface: #1c1f1b; --surface-elevated: #252820;
+  --text: #f5ede2; --muted: #c2b6a6; --border: #494b40; --input-border: #8d8d7d;
+  --primary: #e7d4bb; --primary-dark: #f6e7d4; --primary-soft: #382b31; --on-primary: #29281e;
+  --focus: #e4b4ca; --input-bg: #191c17; --disabled-bg: #393c34;
+  --success-bg: #233a2a; --success-text: #b5ddb8; --success-border: #617d61;
+  --warning-bg: #3e331f; --warning-text: #ebd295; --warning-border: #998156;
+  --danger-bg: #422627; --danger-text: #ffc5bd; --danger-border: #a16f68; --danger: #f3b3aa; --on-danger: #3a1b19;
+  --info-bg: #253640; --info-text: #b7d9ef;
+  --hero-bg: #29281e; --hero-text: #e7d4bb; --hero-muted: #c5b9a6;
+  --footer-bg: #191c17; --footer-text: #eee4d6; --footer-muted: #c5b9a6; --footer-border: #494b40;
+  --scrollbar-thumb: #867c6a; --scrollbar-hover: #b4a38a; --overlay: rgb(0 0 0 / .76);
+  --shadow: 0 4px 16px rgb(0 0 0 / .15), 0 16px 48px rgb(0 0 0 / .18); --shadow-sm: 0 2px 8px rgb(0 0 0 / .15);
+  color-scheme: dark;
 }
