@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
+import { supabaseConfigurationError } from './lib/supabaseClient.js'
+import PageHeading from './components/PageHeading.jsx'
 import Layout from './components/layout/Layout.jsx'
 import Home from './pages/Home.jsx'
 const AuthPage = lazy(() => import('./pages/AuthPage.jsx'))
@@ -27,6 +29,26 @@ const verificationLoading = (
 )
 
 export default function App() {
+  useEffect(() => {
+    if (supabaseConfigurationError)
+      document.title = 'Supabase setup required · eRental'
+  }, [])
+
+  if (supabaseConfigurationError) {
+    return (
+      <main id="main" className="container page">
+        <PageHeading eyebrow="eRental" title="Supabase setup required" />
+        <p className="form-error" role="alert">
+          {supabaseConfigurationError}
+        </p>
+        <p>
+          Update the app’s environment settings, then restart the development
+          server or rebuild the app.
+        </p>
+      </main>
+    )
+  }
+
   return (
     <Routes>
       <Route element={<Layout />}>

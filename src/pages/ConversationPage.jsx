@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { formatTime } from '../lib/messages.js'
 import EmptyState from '../components/EmptyState.jsx'
 import Icon from '../components/Icon.jsx'
+import LoadError from '../components/LoadError.jsx'
 import PageHeading from '../components/PageHeading.jsx'
 import '../styles/conversation.css'
 
@@ -13,57 +14,137 @@ const META =
 
 export default function ConversationPage() {
   const { id } = useParams()
+  // React Router reuses the page on a parameter change. Keep drafts, reads,
+  // and replies scoped to the conversation shown in the location.
+  return <Conversation key={id} id={id} />
+}
+
+function Conversation({ id }) {
   const { user } = useAuth()
   const [conv, setConv] = useState(undefined) // undefined = loading, null = not found
-  const [messages, setMessages] = useState([])
+  const [conversationError, setConversationError] = useState('')
+  const [revision, setRevision] = useState(0)
+  const [messages, setMessages] = useState(null)
+  const [messagesError, setMessagesError] = useState('')
   const [body, setBody] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [feedback, setFeedback] = useState('')
+  const [needsRefresh, setNeedsRefresh] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const endRef = useRef(null)
   const composerRef = useRef(null)
-  const sendingRef = useRef(false)
+  const headingRef = useRef(null)
+  const refreshRef = useRef(null)
+  const sendingRef = useRef(null)
+  const readingRef = useRef(null)
+  const uncertainSend = useRef(null)
+  const refreshInFlight = useRef(false)
 
-  const loadMessages = useCallback(async () => {
-    const { data, error: loadError } = await supabase
-      .from('messages')
-      .select('id, sender_id, body, created_at, read_at')
-      .eq('conversation_id', id)
-      .order('created_at')
-    if (loadError) return setError(loadError.message)
-    setMessages(data ?? [])
-    if ((data ?? []).some((m) => m.sender_id !== user.id && !m.read_at)) {
-      await supabase
-        .from('messages')
-        .update({ read_at: new Date().toISOString() })
-        .eq('conversation_id', id)
-        .neq('sender_id', user.id)
-        .is('read_at', null)
-    }
-  }, [id, user.id])
+  const loadMessages = useCallback(
+    async (replacePending = false) => {
+      if (readingRef.current && !replacePending) return null
+      readingRef.current?.abort()
+      const controller = new AbortController()
+      readingRef.current = controller
+      const timeout = setTimeout(() => controller.abort(), 15_000)
+      try {
+        const { data, error: loadError } = await supabase
+          .from('messages')
+          .select('id, sender_id, body, created_at, read_at')
+          .eq('conversation_id', id)
+          .order('created_at')
+          .abortSignal(controller.signal)
+        if (loadError) throw loadError
+        if (readingRef.current !== controller) return null
+        const rows = data ?? []
+        setMessages(rows)
+        setMessagesError('')
+        if ((data ?? []).some((m) => m.sender_id !== user.id && !m.read_at)) {
+          await supabase
+            .from('messages')
+            .update({ read_at: new Date().toISOString() })
+            .eq('conversation_id', id)
+            .neq('sender_id', user.id)
+            .is('read_at', null)
+            .abortSignal(controller.signal)
+        }
+        return readingRef.current === controller ? rows : null
+      } catch {
+        if (readingRef.current === controller) {
+          setMessagesError(
+            'We couldn’t load your messages. Check your connection and try again.',
+          )
+        }
+        return null
+      } finally {
+        clearTimeout(timeout)
+        if (readingRef.current === controller) readingRef.current = null
+      }
+    },
+    [id, user.id],
+  )
 
   useEffect(() => {
-    supabase
-      .from('conversations')
-      .select(META)
-      .eq('id', id)
-      .maybeSingle()
-      .then(({ data }) => setConv(data ?? null))
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    let active = true
+    setConversationError('')
+    ;(async () => {
+      try {
+        const { data, error: loadError } = await supabase
+          .from('conversations')
+          .select(META)
+          .eq('id', id)
+          .maybeSingle()
+          .abortSignal(controller.signal)
+        if (loadError) throw loadError
+        if (active) setConv(data ?? null)
+      } catch {
+        if (active)
+          setConversationError(
+            'We couldn’t load this conversation. Check your connection and try again.',
+          )
+      } finally {
+        clearTimeout(timeout)
+      }
+    })()
+    return () => {
+      active = false
+      clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [id, revision])
+
+  useEffect(() => {
+    if (!conv) return
     loadMessages()
     const timer = setInterval(loadMessages, 8000)
-    return () => clearInterval(timer)
-  }, [id, loadMessages])
+    return () => {
+      clearInterval(timer)
+      readingRef.current?.abort()
+      readingRef.current = null
+      sendingRef.current?.abort()
+      sendingRef.current = null
+    }
+  }, [conv, loadMessages])
 
+  const messageCount = messages?.length
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [messages.length])
+  }, [messageCount])
   useEffect(() => {
-    if (sent && !busy) composerRef.current?.focus()
-  }, [sent, busy])
+    if (conv && revision > 0) headingRef.current?.focus()
+  }, [conv, revision])
+  useEffect(() => {
+    if (busy) return
+    if (needsRefresh) refreshRef.current?.focus()
+    else if (feedback || error) composerRef.current?.focus()
+  }, [busy, error, feedback, needsRefresh])
 
   async function handleSend(e) {
     e.preventDefault()
-    if (sendingRef.current) return
+    if (sendingRef.current || needsRefresh || !messages) return
     const text = body.trim()
     if (!text) return composerRef.current?.focus()
     if (text.length > 2000) {
@@ -71,19 +152,94 @@ export default function ConversationPage() {
       composerRef.current?.focus()
       return
     }
-    sendingRef.current = true
+    const controller = new AbortController()
+    sendingRef.current = controller
+    const timeout = setTimeout(() => controller.abort(), 15_000)
     setBusy(true)
-    setSent(false)
+    setFeedback('')
     setError('')
-    const { error: sendError } = await supabase
-      .from('messages')
-      .insert({ conversation_id: id, sender_id: user.id, body: text })
-    sendingRef.current = false
-    setBusy(false)
-    if (sendError) return setError(sendError.message)
-    setBody('')
-    setSent(true)
-    loadMessages()
+    try {
+      const { error: sendError, status } = await supabase
+        .from('messages')
+        .insert({ conversation_id: id, sender_id: user.id, body: text })
+        .abortSignal(controller.signal)
+      if (sendingRef.current !== controller) return
+      if (sendError) {
+        if (!status || status === 408 || status >= 500) throw sendError
+        return setError('We couldn’t send your message. Try again.')
+      }
+      setBody('')
+      setFeedback('Message sent.')
+      // A read that began before the insert cannot confirm the new message.
+      readingRef.current?.abort()
+      readingRef.current = null
+      loadMessages()
+    } catch {
+      if (sendingRef.current === controller) {
+        uncertainSend.current = {
+          text,
+          ids: new Set(messages.map(({ id }) => id)),
+        }
+        setNeedsRefresh(true)
+        setError(
+          'We couldn’t confirm your message was sent. Refresh messages to check before sending it again.',
+        )
+      }
+    } finally {
+      clearTimeout(timeout)
+      if (sendingRef.current === controller) {
+        sendingRef.current = null
+        setBusy(false)
+      }
+    }
+  }
+
+  async function refreshMessages() {
+    if (refreshInFlight.current) return
+    refreshInFlight.current = true
+    setRefreshing(true)
+    const attempt = uncertainSend.current
+    try {
+      const rows = await loadMessages(true)
+      if (!rows || !attempt || uncertainSend.current !== attempt) return
+      const matchingMessage = rows.some(
+        (message) =>
+          message.sender_id === user.id &&
+          message.body === attempt.text &&
+          !attempt.ids.has(message.id),
+      )
+      if (matchingMessage) {
+        setBody('')
+        setFeedback('A matching message is already in this conversation.')
+      }
+      uncertainSend.current = null
+      setNeedsRefresh(false)
+      setError(
+        matchingMessage
+          ? ''
+          : 'Check the refreshed conversation before sending your draft again.',
+      )
+    } finally {
+      refreshInFlight.current = false
+      setRefreshing(false)
+      requestAnimationFrame(() => {
+        if (document.activeElement === document.body)
+          refreshRef.current?.focus()
+      })
+    }
+  }
+
+  if (conversationError) {
+    return (
+      <section className="container page conversation-page">
+        <LoadError onRetry={() => setRevision((v) => v + 1)}>
+          {conversationError}
+        </LoadError>
+        <Link className="btn btn-ghost" to="/messages">
+          Back to messages
+        </Link>
+      </section>
+    )
   }
 
   if (conv === undefined)
@@ -137,17 +293,18 @@ export default function ConversationPage() {
         <PageHeading
           eyebrow="Your conversation"
           title={name}
+          titleRef={headingRef}
           actions={
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => {
-                setError('')
-                loadMessages()
-              }}
+              ref={refreshRef}
+              disabled={refreshing}
+              aria-busy={refreshing}
+              onClick={refreshMessages}
             >
               <Icon name="message" size={18} />
-              Refresh messages
+              {refreshing ? 'Refreshing messages…' : 'Refresh messages'}
             </button>
           }
         >
@@ -165,13 +322,23 @@ export default function ConversationPage() {
               </div>
               <Icon name="message" size={22} />
             </header>
+            {messagesError && (
+              <LoadError onRetry={refreshMessages} retrying={refreshing}>
+                {messagesError}
+              </LoadError>
+            )}
             <ul
               className="thread__list conversation-messages"
               aria-label="Conversation messages"
               aria-live="polite"
               aria-relevant="additions text"
             >
-              {messages.length === 0 && (
+              {messages === null && !messagesError && (
+                <li role="status" className="conversation-empty">
+                  Loading messages…
+                </li>
+              )}
+              {messages?.length === 0 && !messagesError && (
                 <li className="conversation-empty">
                   <Icon name="message" size={36} />
                   <h2>Start with a hello</h2>
@@ -181,7 +348,7 @@ export default function ConversationPage() {
                   </p>
                 </li>
               )}
-              {messages.map((m) => (
+              {messages?.map((m) => (
                 <li
                   key={m.id}
                   className={`bubble conversation-bubble${m.sender_id === user.id ? ' bubble--mine' : ''}`}
@@ -226,11 +393,11 @@ export default function ConversationPage() {
                 maxLength={2000}
                 placeholder="Write a message…"
                 value={body}
-                disabled={busy}
+                disabled={busy || needsRefresh}
                 aria-describedby={`message-help${error ? ' message-error' : ''}`}
                 onChange={(e) => {
                   setBody(e.target.value)
-                  setSent(false)
+                  setFeedback('')
                 }}
               />
               {error && (
@@ -238,17 +405,6 @@ export default function ConversationPage() {
                   <p id="message-error" className="form-error" role="alert">
                     {error}
                   </p>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    disabled={busy}
-                    onClick={() => {
-                      setError('')
-                      loadMessages()
-                    }}
-                  >
-                    Try loading messages again
-                  </button>
                 </div>
               )}
               <div className="conversation-composer__footer">
@@ -256,12 +412,12 @@ export default function ConversationPage() {
                   Up to 2,000 characters
                 </span>
                 <span className="sr-only" role="status">
-                  {sent ? 'Message sent.' : ''}
+                  {feedback}
                 </span>
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={busy || !body.trim()}
+                  disabled={busy || needsRefresh || !messages || !body.trim()}
                 >
                   <Icon name="arrowRight" size={18} />
                   {busy ? 'Sending…' : 'Send'}

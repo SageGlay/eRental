@@ -8,6 +8,7 @@ import {
   estimateAmounts,
   formatRange,
   setBookingStatus,
+  simulateBookingPayment,
   today,
 } from '../lib/bookings.js'
 import { StarRating } from '../components/Stars.jsx'
@@ -52,33 +53,53 @@ const CONFIRMATION = {
 
 function useBookings(column, userId) {
   const [state, setState] = useState({ rows: [], loading: true, error: null })
-  const load = useCallback(() => {
-    supabase
-      .from('bookings')
-      .select(SELECT)
-      .eq(column, userId)
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) =>
+  const active = useRef(null)
+  const load = useCallback(async () => {
+    active.current?.abort()
+    const controller = new AbortController()
+    active.current = controller
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(SELECT)
+        .eq(column, userId)
+        .order('created_at', { ascending: false })
+        .abortSignal(controller.signal)
+      if (error) throw error
+      if (active.current !== controller) return false
+      setState({ rows: data ?? [], loading: false, error: null })
+      return true
+    } catch {
+      if (active.current === controller) {
         setState({
-          rows: data ?? [],
+          rows: [],
           loading: false,
-          error: error ? error.message : null,
-        }),
-      )
+          error: 'Check your connection and try again.',
+        })
+      }
+      return false
+    } finally {
+      clearTimeout(timeout)
+    }
   }, [column, userId])
   useEffect(() => {
     load()
+    return () => {
+      active.current?.abort()
+      active.current = null
+    }
   }, [load])
   return { ...state, reload: load }
 }
 
-function BookingCard({ b, role, onChange }) {
+function BookingCard({ b, role, onChange, onResult }) {
   const [confirm, setConfirm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [needsRefresh, setNeedsRefresh] = useState(false)
   const busyRef = useRef(false)
-  const titleRef = useRef(null)
+  const refreshRef = useRef(null)
   const { user } = useAuth()
   const navigate = useNavigate()
   const isOwner = role === 'owner'
@@ -102,12 +123,15 @@ function BookingCard({ b, role, onChange }) {
       actions.push(['Mark completed', 'completed', true])
   }
 
+  useEffect(() => {
+    if (needsRefresh && !busy) refreshRef.current?.focus()
+  }, [needsRefresh, busy, confirm])
+
   function begin() {
     if (busyRef.current) return false
     busyRef.current = true
     setBusy(true)
     setError('')
-    setNotice('')
     return true
   }
 
@@ -129,38 +153,46 @@ function BookingCard({ b, role, onChange }) {
     }
   }
 
-  async function pay() {
-    if (!begin()) return
+  async function act(status) {
+    if (needsRefresh || !begin()) return
+    const payment = status === 'simulate_payment'
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
     try {
-      const { error: payError } = await supabase.rpc('simulate_payment', {
-        p_booking_id: b.id,
-      })
-      if (payError) return setError(payError.message)
+      const message = payment
+        ? await simulateBookingPayment(b.id, controller.signal)
+        : await setBookingStatus(b.id, status, controller.signal)
+      if (message) return setError(message)
       setConfirm(null)
-      setNotice('Payment simulation completed. No real money was charged.')
-      onChange()
-      requestAnimationFrame(() => titleRef.current?.focus())
-    } catch (err) {
+      await onChange()
+      onResult(
+        payment
+          ? 'Payment simulation completed. No real money was charged.'
+          : `Booking updated: ${STATUS_LABELS[status]}.`,
+      )
+    } catch {
+      setNeedsRefresh(true)
       setError(
-        err?.message ||
-          'We couldn’t confirm the payment simulation. Refresh before trying again.',
+        payment
+          ? 'We couldn’t confirm the payment simulation. Refresh bookings before trying again.'
+          : 'We couldn’t confirm the booking update. Refresh bookings before trying again.',
       )
     } finally {
+      clearTimeout(timeout)
       finish()
     }
   }
 
-  async function act(status) {
+  async function refreshBooking() {
     if (!begin()) return
     try {
-      const message = await setBookingStatus(b.id, status)
-      if (message) return setError(message)
-      setConfirm(null)
-      setNotice(`Booking updated: ${STATUS_LABELS[status]}.`)
-      onChange()
-      requestAnimationFrame(() => titleRef.current?.focus())
-    } catch (err) {
-      setError(err?.message || 'We couldn’t update this booking. Try again.')
+      if (await onChange()) {
+        setNeedsRefresh(false)
+        setConfirm(null)
+        onResult('Bookings refreshed.')
+      } else {
+        setError('We couldn’t refresh this booking. Try again.')
+      }
     } finally {
       finish()
     }
@@ -202,9 +234,13 @@ function BookingCard({ b, role, onChange }) {
               {isOwner ? 'Request for your listing' : 'Your rental request'}
             </p>
             <h3>
-              <Link ref={titleRef} to={`/listings/${b.listings?.id}`}>
-                {b.listings?.title || 'Listing no longer available'}
-              </Link>
+              {b.listings?.id ? (
+                <Link to={`/listings/${b.listings.id}`}>
+                  {b.listings.title}
+                </Link>
+              ) : (
+                <span>Listing no longer available</span>
+              )}
             </h3>
           </div>
           <span className={`status status--${b.status}`}>
@@ -289,11 +325,6 @@ function BookingCard({ b, role, onChange }) {
             <ReviewForm bookingId={b.id} onDone={onChange} />
           </div>
         )}
-        {notice && (
-          <p className="form-success" role="status">
-            {notice}
-          </p>
-        )}
         {error && !confirm && (
           <p className="form-error" role="alert">
             {error}
@@ -301,10 +332,12 @@ function BookingCard({ b, role, onChange }) {
         )}
       </div>
       <footer className="booking-card__footer">
-        <Link className="btn btn-ghost" to={`/listings/${b.listings?.id}`}>
-          View listing
-          <Icon name="arrowRight" size={16} />
-        </Link>
+        {b.listings?.id && (
+          <Link className="btn btn-ghost" to={`/listings/${b.listings.id}`}>
+            View listing
+            <Icon name="arrowRight" size={16} />
+          </Link>
+        )}
         <div className="booking__actions">
           {!isOwner && b.listings && (
             <button
@@ -321,7 +354,7 @@ function BookingCard({ b, role, onChange }) {
             <button
               type="button"
               className="btn btn-primary"
-              disabled={busy}
+              disabled={busy || needsRefresh}
               onClick={askPayment}
             >
               Pay {formatPrice(estimate.total)} (simulated)
@@ -331,7 +364,7 @@ function BookingCard({ b, role, onChange }) {
             <button
               key={status}
               type="button"
-              disabled={busy}
+              disabled={busy || needsRefresh}
               className={
                 status === 'accepted' || status === 'completed'
                   ? 'btn btn-primary'
@@ -342,6 +375,17 @@ function BookingCard({ b, role, onChange }) {
               {label}
             </button>
           ))}
+          {needsRefresh && !confirm && (
+            <button
+              ref={refreshRef}
+              type="button"
+              className="btn btn-primary"
+              disabled={busy}
+              onClick={refreshBooking}
+            >
+              {busy ? 'Refreshing…' : 'Refresh bookings'}
+            </button>
+          )}
         </div>
       </footer>
       {confirm && (
@@ -402,19 +446,22 @@ function BookingCard({ b, role, onChange }) {
             </button>
             <button
               type="button"
-              className={`btn ${['accepted', 'completed', 'simulate_payment'].includes(confirm.status) ? 'btn-primary' : 'btn-danger'}`}
+              ref={needsRefresh ? refreshRef : undefined}
+              className={`btn ${needsRefresh || ['accepted', 'completed', 'simulate_payment'].includes(confirm.status) ? 'btn-primary' : 'btn-danger'}`}
               disabled={busy}
               onClick={() =>
-                confirm.status === 'simulate_payment'
-                  ? pay()
-                  : act(confirm.status)
+                needsRefresh ? refreshBooking() : act(confirm.status)
               }
             >
-              {busy
-                ? confirm.status === 'simulate_payment'
-                  ? 'Simulating…'
-                  : 'Updating…'
-                : confirm.action}
+              {needsRefresh
+                ? busy
+                  ? 'Refreshing…'
+                  : 'Refresh bookings'
+                : busy
+                  ? confirm.status === 'simulate_payment'
+                    ? 'Simulating…'
+                    : 'Updating…'
+                  : confirm.action}
             </button>
           </div>
         </Dialog>
@@ -423,7 +470,7 @@ function BookingCard({ b, role, onChange }) {
   )
 }
 
-function Section({ title, rows, role, onChange }) {
+function Section({ title, rows, role, onChange, onResult }) {
   if (rows.length === 0) return null
   return (
     <div className="bookings-section">
@@ -432,7 +479,13 @@ function Section({ title, rows, role, onChange }) {
       </h2>
       <ul className="bookings">
         {rows.map((b) => (
-          <BookingCard key={b.id} b={b} role={role} onChange={onChange} />
+          <BookingCard
+            key={b.id}
+            b={b}
+            role={role}
+            onChange={onChange}
+            onResult={onResult}
+          />
         ))}
       </ul>
     </div>
@@ -441,9 +494,20 @@ function Section({ title, rows, role, onChange }) {
 
 function Panel({ role, userId, status, onStatusChange }) {
   const isOwner = role === 'owner'
+  const [notice, setNotice] = useState('')
+  const listHeading = useRef(null)
   const { rows, loading, error, reload } = useBookings(
     isOwner ? 'owner_id' : 'renter_id',
     userId,
+  )
+  function showResult(message) {
+    setNotice(message)
+    requestAnimationFrame(() => listHeading.current?.focus())
+  }
+  const result = notice && (
+    <p className="form-success" role="status">
+      {notice}
+    </p>
   )
   if (loading)
     return (
@@ -454,9 +518,12 @@ function Panel({ role, userId, status, onStatusChange }) {
     )
   if (error)
     return (
-      <LoadError onRetry={reload}>
-        We couldn’t load your bookings ({error}).
-      </LoadError>
+      <div>
+        {result}
+        <LoadError onRetry={reload}>
+          We couldn’t load your bookings. {error}
+        </LoadError>
+      </div>
     )
   if (rows.length === 0) {
     return (
@@ -489,7 +556,9 @@ function Panel({ role, userId, status, onStatusChange }) {
     <>
       <div className="bookings-toolbar">
         <div>
-          <h2>{isOwner ? 'Your incoming requests' : 'Your rental activity'}</h2>
+          <h2 ref={listHeading} tabIndex={-1}>
+            {isOwner ? 'Your incoming requests' : 'Your rental activity'}
+          </h2>
           <p>
             {isOwner
               ? 'Review requests and keep track of your rental schedule.'
@@ -512,6 +581,7 @@ function Panel({ role, userId, status, onStatusChange }) {
           </select>
         </div>
       </div>
+      {result}
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Icon name="calendar" size={32} />}
@@ -531,7 +601,13 @@ function Panel({ role, userId, status, onStatusChange }) {
       ) : !isOwner ? (
         <ul className="bookings">
           {filtered.map((b) => (
-            <BookingCard key={b.id} b={b} role="renter" onChange={reload} />
+            <BookingCard
+              key={b.id}
+              b={b}
+              role="renter"
+              onChange={reload}
+              onResult={showResult}
+            />
           ))}
         </ul>
       ) : (
@@ -541,12 +617,14 @@ function Panel({ role, userId, status, onStatusChange }) {
             rows={filtered.filter((b) => b.status === 'pending')}
             role="owner"
             onChange={reload}
+            onResult={showResult}
           />
           <Section
             title="Confirmed bookings (schedule)"
             rows={confirmed}
             role="owner"
             onChange={reload}
+            onResult={showResult}
           />
           <Section
             title="History"
@@ -555,6 +633,7 @@ function Panel({ role, userId, status, onStatusChange }) {
             )}
             role="owner"
             onChange={reload}
+            onResult={showResult}
           />
         </>
       )}

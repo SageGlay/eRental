@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
+    "test:db": "node --test tests/postgres/*.test.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
