@@ -49,7 +49,7 @@ export default function ReportListing({ listing }) {
         </select>
       </div>
       <label htmlFor="report-details" className="sr-only">Details</label>
-      <textarea id="report-details" maxLength={1000} placeholder="Details (required for “Something else”)" value={details} onChange={(e) => setDetails(e.target.value)} />
+      <textarea className="resize-none" id="report-details" maxLength={1000} placeholder="Details (required for “Something else”)" value={details} onChange={(e) => setDetails(e.target.value)} />
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="booking__actions">
         <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Sending…' : 'Send report'}</button>

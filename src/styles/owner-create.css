@@ -1,0 +1,45 @@
+.owner-editor__layout { display: grid; align-items: start; gap: var(--s6); }
+.owner-editor__main { min-width: 0; }
+.owner-editor__section { min-width: 0; margin-bottom: var(--s4); padding: var(--s5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-elevated); }
+.owner-editor__section-heading { display: flex; align-items: flex-start; gap: var(--s3); margin-bottom: var(--s5); }
+.owner-editor__section-heading h2 { margin: 0 0 var(--s1); font-size: 1.25rem; line-height: 1.35; overflow-wrap: anywhere; }
+.owner-editor__section-heading p { margin: 0; color: var(--muted); font-size: 0.875rem; }
+.owner-editor__section-icon { display: grid; flex: 0 0 44px; place-items: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); color: var(--primary); }
+.owner-editor__section > .field:last-child { margin-bottom: 0; }
+.owner-editor .field input, .owner-editor .field select, .owner-editor .field textarea { width: 100%; min-width: 0; }
+.owner-editor .field textarea.resize-none { resize: none; field-sizing: content; }
+.owner-editor__photo-count { flex-shrink: 0; margin-left: auto; color: var(--muted); font-size: 0.8125rem; font-weight: 700; }
+.owner-editor__upload { justify-items: start; gap: var(--s3); padding: var(--s5); border: 1px dashed var(--input-border); border-radius: var(--r-md); background: var(--surface); }
+.owner-editor__upload > .icon { color: var(--primary); }
+.owner-editor__upload input { max-width: 100%; padding: var(--s2); background: var(--surface-elevated); }
+.owner-editor .photo-previews { margin-top: var(--s4); }
+.owner-editor .photo-previews button { display: grid; place-items: center; width: 44px; height: 44px; background: var(--primary); color: var(--on-primary); }
+.owner-editor .photo-previews button:hover { background: var(--primary-dark); }
+.owner-editor .photo-previews .photo-preview--failed { gap: var(--s4); }
+.owner-editor__submit { padding: var(--s5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-elevated); }
+.owner-editor__submit > .field__hint { margin-bottom: var(--s4); }
+.owner-editor__submit .btn { min-height: 52px; }
+.owner-editor__guide { padding: var(--s5); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+.owner-editor__guide-symbol { display: inline-grid; place-items: center; width: 64px; height: 64px; margin-bottom: var(--s5); border: 1px solid var(--border); border-radius: var(--r-lg); color: var(--primary); }
+.owner-editor__guide .eyebrow { padding: 0; border: 0; background: transparent; font-size: 0.75rem; }
+.owner-editor__guide h2 { margin-bottom: var(--s5); font-size: 1.625rem; line-height: 1.2; }
+.owner-editor__guide ul { display: grid; gap: var(--s5); }
+.owner-editor__guide li { display: flex; gap: var(--s3); color: var(--muted); font-size: 0.875rem; }
+.owner-editor__guide li > .icon { flex: 0 0 20px; margin-top: var(--s1); color: var(--primary); }
+.owner-editor__guide li strong { display: block; margin-bottom: var(--s1); color: var(--text); }
+.owner-editor__guide-note { display: flex; gap: var(--s3); margin-top: var(--s6); padding-top: var(--s5); border-top: 1px solid var(--border); }
+.owner-editor__guide-note .icon { flex-shrink: 0; color: var(--primary); }
+.owner-editor__guide-note p { color: var(--muted); font-size: 0.875rem; }
+.owner-editor__guide > .field__hint { margin: var(--s4) 0 0; }
+@media (min-width: 1024px) {
+  .owner-editor__layout { grid-template-columns: minmax(0, 1fr) 304px; gap: var(--s6); }
+  .owner-editor__guide { position: sticky; top: calc(var(--nav-h) + var(--s5)); }
+  .owner-editor__section, .owner-editor__submit { padding: var(--s6); }
+}
+@media (max-width: 389px) {
+  .owner-editor__section, .owner-editor__submit { padding: var(--s4); }
+  .owner-editor__upload { padding: var(--s4); }
+  .owner-editor__section-heading { flex-wrap: wrap; }
+  .owner-editor__section-heading > div { flex: 1; min-width: 0; }
+  .owner-editor__photo-count { align-self: center; }
+}

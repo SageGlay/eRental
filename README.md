@@ -1,8 +1,10 @@
-# eRental
+# eRental 2.0
 
 A React marketplace prototype for renting and listing items and properties in Iligan City. One account can rent and own listings. Supabase provides authentication, Postgres/RLS and photo storage; payments are simulated.
 
-Detailed guides: [Local setup and testing](LOCAL_SETUP_AND_TESTING.md), [verification contract export and acceptance tests](VERIFICATION_TESTING.md), and [current milestone status](MILESTONE_STATUS.md).
+Detailed guides: [Local setup and testing](LOCAL_SETUP_AND_TESTING.md), [verification contract export and acceptance tests](VERIFICATION_TESTING.md), [verification milestone history](MILESTONE_STATUS.md), and the [2.0 redesign handoff](REDESIGN.md).
+
+The redesigned interface includes Light, Dark and System themes, self-hosted Manrope/DM Sans typography, an original SVG brand and responsive renter/owner/admin workflows. [DESIGN.md](DESIGN.md) records visual intent; [UX-CONTRACT.md](UX-CONTRACT.md) records behavioral ownership.
 
 ## Develop
 

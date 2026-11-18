@@ -15,6 +15,9 @@ import {
 import { formatDate } from '../lib/format.js'
 import LoadError from '../components/LoadError.jsx'
 import VerifiedBadge from '../components/VerifiedBadge.jsx'
+import PageHeading from '../components/PageHeading.jsx'
+import Icon from '../components/Icon.jsx'
+import '../styles/verification-user.css'
 
 function SubmissionForm({ user, profile, blocked, onDone, onConflict }) {
   const kind = verificationKind(profile)
@@ -84,13 +87,17 @@ function SubmissionForm({ user, profile, blocked, onDone, onConflict }) {
   return (
     <form
       ref={formRef}
-      className="verification-card"
+      className="verification-card verification-user__form"
       onSubmit={submit}
       noValidate
       aria-busy={busy}
     >
+      <div className="verification-user__section-label">
+        <Icon name="upload" size={22} />
+        <span>Private document review</span>
+      </div>
       <h2>Submit a document</h2>
-      <p>
+      <p className="verification-user__intro">
         {kind === 'business'
           ? 'Business verification checks your rental business documents.'
           : 'Identity verification checks a document that identifies you.'}{' '}
@@ -115,8 +122,12 @@ function SubmissionForm({ user, profile, blocked, onDone, onConflict }) {
             ))}
           </select>
         </div>
-        <div className="field">
+        <div className="field verification-user__upload">
           <label htmlFor="verification-document">Document</label>
+          <div className="verification-user__upload-heading" aria-hidden="true">
+            <Icon name="image" size={28} />
+            <span>Choose a clear, readable document</span>
+          </div>
           <input
             id="verification-document"
             name="document"
@@ -137,11 +148,16 @@ function SubmissionForm({ user, profile, blocked, onDone, onConflict }) {
             JPEG, PNG, WebP or PDF, up to 5 MB. Private to you and authorized
             administrators. Use only a non-sensitive sample for testing.
           </span>
+          {file && (
+            <span className="verification-user__filename">
+              Selected: {file.name}
+            </span>
+          )}
         </div>
         <div className="field">
           <label htmlFor="verification-details">Details (optional)</label>
           <textarea
-              className="resize-none"
+            className="resize-none"
             id="verification-details"
             name="details"
             aria-invalid={invalidField === 'details'}
@@ -153,6 +169,12 @@ function SubmissionForm({ user, profile, blocked, onDone, onConflict }) {
             value={details}
             onChange={(e) => setDetails(e.target.value)}
           />
+          <span
+            className="field__hint verification-user__count"
+            aria-hidden="true"
+          >
+            {details.length} / 500
+          </span>
         </div>
       </fieldset>
       {attempt && (
@@ -177,7 +199,7 @@ function SubmissionForm({ user, profile, blocked, onDone, onConflict }) {
             ? 'Retry submission'
             : 'Submit verification request'}
       </button>
-      <p className="field__hint">
+      <p className="field__hint verification-user__submission-hint">
         Submission does not immediately verify your account. You can have one
         pending request at a time. Keep this page open if a retry is needed.
       </p>
@@ -230,27 +252,29 @@ export default function VerificationPage() {
       setSent(null)
   }, [sent, requests.loading, requests.error, requests.rows])
   return (
-    <section className="container page verification-page">
+    <section className="container page verification-page verification-user">
       <p className="breadcrumb">
         <Link to="/profile">My profile</Link> › Account verification
       </p>
-      <div className="verification-heading">
-        <div>
-          <h1>Account verification</h1>
-          <p className="detail__meta">
-            A private document review for your individual or rental business
-            account.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={checking}
-          onClick={refresh}
-        >
-          Refresh status
-        </button>
-      </div>
+      <PageHeading
+        eyebrow="Trust & identity"
+        title="Account verification"
+        actions={
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={checking}
+            onClick={refresh}
+          >
+            Refresh status
+          </button>
+        }
+      >
+        <p>
+          A private document review for your individual or rental business
+          account.
+        </p>
+      </PageHeading>
       {notice && (
         <p className="form-success" role="status">
           {notice}
@@ -258,12 +282,25 @@ export default function VerificationPage() {
       )}
       <div className="verification-layout">
         <section
-          className="verification-card"
+          className={`verification-card verification-user__status-card verification-user__status-card--${verified ? 'approved' : pending ? 'pending' : 'neutral'}`}
           aria-label="Current verification status"
           aria-busy={checking}
         >
+          <div className="verification-user__status-icon" aria-hidden="true">
+            <Icon
+              name={verified ? 'shield' : pending ? 'clock' : 'user'}
+              size={30}
+            />
+          </div>
+          <p className="verification-user__account-kind">
+            {profile
+              ? profile.account_type === 'business'
+                ? 'Business account'
+                : 'Individual account'
+              : 'Account document review'}
+          </p>
           <h2>Your status</h2>
-          <p className="verification-status">
+          <p className="verification-status" aria-live="polite">
             {checking ? 'Checking status…' : status}
           </p>
           {verified && (
@@ -325,7 +362,23 @@ export default function VerificationPage() {
           {requests.error && (
             <LoadError onRetry={requests.refresh}>{requests.error}</LoadError>
           )}
-          <Link to="/profile">Update profile details</Link>
+          <Link to="/profile" className="verification-user__profile-link">
+            Update profile details <Icon name="arrowRight" size={16} />
+          </Link>
+          <div className="verification-user__meaning">
+            <h3>What verification means</h3>
+            <p>
+              A badge reflects a completed account document review. It does not
+              guarantee a listing or the condition of an item.
+            </p>
+            <div className="verification-user__privacy-note">
+              <Icon name="shield" size={18} />
+              <span>
+                Your documents are visible only to you and authorized
+                administrators.
+              </span>
+            </div>
+          </div>
         </section>
         {profile && !isVerified(profile) && !pending && !sent && (
           <SubmissionForm
@@ -359,34 +412,69 @@ export default function VerificationPage() {
           Add your business name in My profile before submitting.
         </p>
       )}
-      <section className="verification-history">
-        <h2>Recent requests</h2>
+      <section className="verification-history verification-user__history-section">
+        <div className="verification-user__history-heading">
+          <div>
+            <p className="eyebrow">Your review history</p>
+            <h2>Recent requests</h2>
+          </div>
+          <Icon name="clock" size={24} />
+        </div>
         <p className="field__hint">
           Your ten most recent submissions. Documents and review notes are not
           public.
         </p>
         {!requests.loading && !requests.error && !requests.rows.length && (
-          <p>No requests yet.</p>
-        )}
-        <ul className="bookings">
-          {requests.rows.map((r) => (
-            <li key={r.id} className="verification-card">
-              <strong>
-                {r.kind === 'business' ? 'Business' : 'Identity'} ·{' '}
-                {r.status[0].toUpperCase() + r.status.slice(1)}
-              </strong>
+          <div className="verification-user__empty">
+            <Icon name="shield" size={24} />
+            <div>
+              <h3>No requests yet.</h3>
               <p>
-                {DOCUMENT_LABELS[r.document_type]} · Submitted{' '}
-                {formatDate(r.created_at)}
+                Your requests and review decisions will appear here after you
+                submit a document.
               </p>
-              {r.admin_note && (
-                <p className="prewrap">Review note: {r.admin_note}</p>
-              )}
-              {r.reviewed_at && (
-                <p className="field__hint">
-                  Reviewed {formatDate(r.reviewed_at)}
+            </div>
+          </div>
+        )}
+        <ul className="verification-user__history">
+          {requests.rows.map((r) => (
+            <li
+              key={r.id}
+              className="verification-card verification-user__request"
+            >
+              <div
+                className={`verification-user__request-icon verification-user__request-icon--${r.status}`}
+                aria-hidden="true"
+              >
+                <Icon
+                  name={
+                    r.status === 'approved'
+                      ? 'shield'
+                      : r.status === 'pending'
+                        ? 'clock'
+                        : 'image'
+                  }
+                  size={22}
+                />
+              </div>
+              <div className="verification-user__request-body">
+                <strong>
+                  {r.kind === 'business' ? 'Business' : 'Identity'} ·{' '}
+                  {r.status[0].toUpperCase() + r.status.slice(1)}
+                </strong>
+                <p>
+                  {DOCUMENT_LABELS[r.document_type]} · Submitted{' '}
+                  {formatDate(r.created_at)}
                 </p>
-              )}
+                {r.admin_note && (
+                  <p className="prewrap">Review note: {r.admin_note}</p>
+                )}
+                {r.reviewed_at && (
+                  <p className="field__hint">
+                    Reviewed {formatDate(r.reviewed_at)}
+                  </p>
+                )}
+              </div>
             </li>
           ))}
         </ul>

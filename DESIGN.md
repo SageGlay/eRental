@@ -1,31 +1,43 @@
 ---
 version: alpha
-name: eRental
-description: Familiar rental cards and clear private review forms for Iligan City.
+name: eRental 2.0
+description: A warm, photo-led local rental marketplace for Iligan City.
 colors:
-  primary: '#0f766e'
-  primary-dark: '#115e59'
-  primary-soft: '#e6f4f2'
-  accent: '#f59e0b'
-  focus: '#1d4ed8'
-  background: '#ffffff'
-  surface: '#f8fafc'
-  border: '#e2e8f0'
-  text: '#0f172a'
-  muted: '#475569'
-  danger-text: '#991b1b'
-  scrollbar-thumb: '#94a3b8'
-  scrollbar-hover: '#64748b'
-  overlay: 'rgba(15, 23, 42, 0.5)'
+  green-velvet: '#29281e'
+  golden-sandalwood: '#857861'
+  almond-light: '#e7d4bb'
+  plum-wine: '#48252f'
+  carbon-powder: '#101211'
+  primary: '#48252f'
+  primary-dark: '#311820'
+  primary-soft: '#f0e5e8'
+  on-primary: '#fff8ef'
+  background: '#faf7f2'
+  surface: '#f0ebe3'
+  surface-elevated: '#fffdf9'
+  text: '#101211'
+  muted: '#645b50'
+  border: '#ddd5c9'
+  input-border: '#8a8175'
+  focus: '#78445a'
+  success-text: '#28542d'
+  success-bg: '#e7efe6'
+  warning-text: '#684b13'
+  warning-bg: '#f6ecd4'
+  danger-text: '#912f2b'
+  danger-bg: '#f7e9e6'
 typography:
   sans:
-    fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif'
-    lineHeight: '1.6'
+    fontFamily: 'Manrope Variable, system-ui, -apple-system, Segoe UI, sans-serif'
+    lineHeight: '1.65'
+  display:
+    fontFamily: 'DM Sans Variable, Manrope Variable, system-ui, sans-serif'
+    lineHeight: '1.15'
 rounded:
-  DEFAULT: '8px'
-  sm: '8px'
-  md: '12px'
-  lg: '20px'
+  DEFAULT: '12px'
+  sm: '12px'
+  md: '20px'
+  lg: '28px'
 spacing:
   s1: '0.25rem'
   s2: '0.5rem'
@@ -42,50 +54,67 @@ components:
     width: '680px'
 ---
 
-# eRental design context
+# eRental 2.0 design context
 
 ## Overview
 
-The existing application is the reference: a local rental noticeboard with teal actions, white/slate cards and direct instructions. Preserve that identity rather than creating a separate brand for verification. The signature remains the teal marketplace mark and calm, clearly labelled rental cards. Private identity review should feel like a careful account task, not a promotional landing page or analytics dashboard.
+The approved 2.0 brief replaces the earlier teal, light-only identity across the existing React marketplace. The audience is renters, owners, businesses and administrators in Iligan City, Philippines. English copy, en-PH dates/currency and Philippine pesos remain. One account can rent and list. This is a hybrid: discovery is expressive; account, booking and moderation screens prioritize familiar, careful actions.
 
-The audience is renters, individual owners, businesses and administrators in Iligan City, Philippines. The UI is English and existing currency/date formatting uses en-PH. No Japanese-market or new localization behavior is introduced. The marketing homepage and authenticated product share the same identity; task clarity and mobile/keyboard operation govern forms and moderation.
+The signature is an original open-loop mark: two interlocking door-shaped paths suggesting something passing from one person to another. Rounded photography, warm paper surfaces, plum actions and a compact wordmark support this idea. The boldest composition belongs to the homepage, where a real listing photo can become the hero preview. When no photo exists, a clearly decorative icon collection appears. Never create invented inventory, reviews, guarantees or activity.
 
-**Runtime ownership:** `src/styles/tokens.css` is canonical. This file documents its values; it does not generate CSS. Color names map to matching `--name` properties except background → `--bg`. Scrollbar track aliases `--surface`; active thumb uses `--muted`. Type maps to `--font`, shape to `--r-sm/md/lg`, and spacing to `--s1` through `--s8`. Verification styles consume those properties. Change both runtime values and this record when deliberately evolving the system.
+**Runtime ownership (model B):** `src/styles/tokens.css` is canonical; this file mirrors accepted values and rationale. Primitive palette → semantic variables → shared CSS/components → page styles. Colors map to `--name`, except background → `--bg`; typography maps to `--font` and `--font-display`; radii to `--r-sm/md/lg`; spacing to `--s1..s8`. Components must consume semantic colors. Static SVG brand assets intentionally use the approved primitive palette. No generated adapter or second theme package exists.
 
 ## Colors
 
-Teal is the primary action and approved verification badge color. White and pale slate distinguish surfaces; text remains dark slate. Amber notices explain consequences, and existing error classes use dark red text. Status meaning is also written in text. Global scrollbar thumb/track/hover states stay visible and defer to system colors in forced-color mode.
+Green Velvet #29281E, Golden Sandalwood #857861, Almond Light #E7D4BB, Plum Wine #48252F and Carbon Powder #101211 are the approved primitives. Sandalwood is decorative/supporting, not small body text on pale backgrounds. Derived warm neutrals provide readable content surfaces. Plum is the light-mode action; almond is the dark-mode action. Semantic success/warning/error colors always accompany text labels.
 
-This app currently has a light theme. Do not imply a supported dark theme or introduce private-document information into decorative backgrounds.
+| Role / runtime token | Light | Dark |
+| --- | --- | --- |
+| `--bg` | #faf7f2 | #101211 |
+| `--surface` | #f0ebe3 | #1c1f1b |
+| `--surface-elevated` | #fffdf9 | #252820 |
+| `--text` | #101211 | #f5ede2 |
+| `--muted` | #645b50 | #c2b6a6 |
+| `--primary` | #48252f | #e7d4bb |
+| `--primary-dark` (hover) | #311820 | #f6e7d4 |
+| `--primary-soft` | #f0e5e8 | #382b31 |
+| `--on-primary` | #fff8ef | #29281e |
+| `--border` | #ddd5c9 | #494b40 |
+| `--input-border` | #8a8175 | #8d8d7d |
+| `--focus` | #78445a | #e4b4ca |
+| `--hero-bg` / `--hero-text` | #e7d4bb / #29281e | #29281e / #e7d4bb |
+
+All remaining alert, input, disabled, footer, overlay, scrollbar and shadow roles are maintained in the same runtime file, including dark overrides. Soft dividers are decorative; input borders and focus rings provide stronger control boundaries. Do not put elevated light-mode colors directly in component CSS.
 
 ## Typography
 
-Reuse Inter with the existing system fallbacks, body line height and heading weights. Account verification uses restrained page headings and the existing form label/body styles. Native controls remain labelled; legal and privacy instructions use readable text rather than icon-only hints. Format dates/currency with existing helpers.
+Manrope Variable supplies the readable body and utility voice; DM Sans Variable supplies slightly tighter, distinctive display headings and wordmark. Two self-hosted Latin WOFF2 faces total about 62 kB, avoid an external Google Fonts request and use swap/system fallbacks. English is the supported UI language; broader script font coverage is outside this milestone. Headings use fluid 32–52px page type, 24–36px section type and 18px card titles; body is 16px with 1.65 leading. Compact metadata may use 12–14px where secondary. Primary tasks never rely on tiny type.
 
 ## Layout
 
-Preserve the 1120px content container, existing spacing rhythm and mobile-first layout. Verification status/form becomes two columns at 900px; admin records become a table at 900px and cards below it. Both representations preserve the same permitted actions. Review dialogs are bounded by the viewport, scroll internally and retain reachable close/confirmation controls.
+The shared container is 1320px with 16px phone / 32px larger gutters. Spacing uses a 4px base. Cards use larger, consistently cropped photography; compact information and actual rates permit comparison. Browse uses a desktop filter sidebar and a mobile disclosure. Auth uses a story/form split; listing forms use grouped sections and a guidance rail. Renter/owner views remain equally accessible, and native selects/date inputs intentionally retain platform popup behavior.
+
+Navigation becomes a compact desktop header above 1200px and a purpose-built disclosure below it, with the theme selector always reachable. Account links live in a native disclosure, with Escape/outside-close behavior. Mobile does not shrink a full desktop link row. Pages scroll naturally; only dialogues and appropriate message regions own internal overflow. Admin verification uses table/cards at its existing breakpoint.
 
 ## Elevation & Depth
 
-Use existing card borders and subtle shared shadow. Native modal dialogs occupy the browser's top layer above sticky navigation, with the tokenized overlay. Avoid new arbitrary z-index stacks or marketing gradients.
+Elevated content uses restrained warm shadows, borders and surface changes. Native modal dialogs use the browser top layer and a tokenized backdrop. No decorative gradients, glass effects, animation packages, charts or fake analytics are needed. Private evidence remains contained and uncropped when viewed.
 
 ## Shapes
 
-Use the existing 8/12/20px radius family: controls and badges small, cards medium, dialog large. Keep document previews rectangular and contained; do not crop evidence needed for review.
+Controls use 12px, cards 20px and larger framed regions/dialogs 28px radii. Pills are reserved for statuses and selected controls. The open-loop mark stays recognizable at favicon scale; all SVG utility icons share one 24px viewbox, currentColor and 1.6px rounded strokes.
 
 ## Components
 
-Reuse `.btn`, `.field`, `.form-error`, `.form-success`, `LoadError`, `EmptyState`, route guards and formatting helpers. `VerifiedBadge` is the single verification badge owner. `Dialog` owns modal focus/Escape/inert behavior, while `VerificationDocument` owns authenticated, transient private viewing. Native selects/file pickers are intentional platform controls; their popup geometry is not authored.
+`Brand`, `Icon`, `PageHeading`, `ListingSkeleton`, `ThemeControl` and `UnsavedChangesGuard` join existing `Dialog`, `VerifiedBadge`, `VerificationDocument`, `LoadError`, `EmptyState`, `.btn` and `.field`. Page CSS supplies composition; shared tokens and primitives supply color and interaction conventions. Buttons have default/primary/ghost/danger emphasis, hover, focus, active and disabled states. Forms retain owned validation, data recovery and labels. Textareas do not resize manually; adequate height and content sizing allow expansion.
 
-Busy primary form actions retain full width; disabled controls cannot submit. Confirmations name the action/applicant, begin with the safe Go back action, and preserve the note on failure. A successful review closes the dialog and focuses the stable queue heading. Do not substitute browser confirm/alert for these controls.
-
-Motion remains subtle and uses existing reduced-motion suppression. Product language stays direct: Pending, Approved, Rejected, Submit verification request, Approve, Reject. A verified badge is evidence of the configured account review, never a guarantee about listings or item condition.
+Skeletons are used for real loading, per this brief. Errors retain truthful recovery, never fake results. Dialogs remain keyboard accessible, with safe initial close/back controls, bounded content and focus restoration. Significant booking and moderation decisions use explicit confirmation. Status colors do not replace status words. Global scrollbars remain visible, tokenized and operable in forced-color mode. Motion is restrained and suppressed under reduced-motion preference.
 
 ## Do's and Don'ts
 
-- Reuse established tokens and controls; preserve marketplace routes and business behavior.
-- Keep private documents out of public profile/listing views and URLs.
-- Use textual labels alongside status color and clear recovery after failure.
-- Do not add unrelated navigation redesigns, export controls, payments or artificial metrics.
-- Do not infer verified status from a submitted form, an old approved request or a client-editable profile value.
+- Preserve all routes, existing Supabase calls, authorization, retry identity and actual state transitions.
+- Support light, dark and system preference across the entire app; keep preference local and apply it before React starts.
+- Keep private documents out of public content, durable storage and public URLs.
+- Use real photos only where present; show honest missing/broken media states.
+- Never imply real payments, instantaneous messaging, inspected listings, guaranteed availability or verification guarantees.
+- Do not replace product controls with decorative icons or obscure essential actions on phones.

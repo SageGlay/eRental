@@ -80,7 +80,7 @@ export default function RequestForm({ listing }) {
         </div>
         <div className="field">
           <label htmlFor="message">Message to the owner (optional)</label>
-          <textarea id="message" maxLength={1000} value={form.message} onChange={set('message')} />
+          <textarea className="resize-none" id="message" maxLength={1000} value={form.message} onChange={set('message')} />
         </div>
       </fieldset>
       {error && <p className="form-error" role="alert">{error}</p>}

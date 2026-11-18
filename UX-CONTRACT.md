@@ -1,6 +1,6 @@
-# Verification UI contract
+# eRental interaction contract
 
-This records implemented behavior for the account verification milestone, not a new general roadmap. Visual ownership is in [DESIGN.md](DESIGN.md); runtime values remain in `src/styles/tokens.css`.
+This records shared marketplace interactions, including the protected account verification workflow and the approved 2.0 presentation changes below. Visual ownership is in [DESIGN.md](DESIGN.md); runtime values remain in `src/styles/tokens.css`.
 
 ## Business evidence
 
@@ -52,3 +52,17 @@ The existing RPC needs separate backend hardening for concurrent decisions/accou
 Identity documents are fetched with the authenticated SDK only on explicit request, with no-store and a timeout. URL-reserved/encoded path characters and dot traversal are rejected before privileged viewing. Viewer blob URLs are revoked on hide/unmount; no service-role key, public document URL, document contents or bearer links are logged or persisted in browser storage. Already downloaded/opened content cannot be remotely recalled.
 
 Native dialogs provide inert background, focus trapping and Escape. Focus stays inside confirmations and moves to a stable queue heading after completed reviews; it returns to the opener when canceling a review. Errors use role=alert, success uses role=status, and invalid file selection regains focus after the form is enabled. Modern Chromium/keyboard/narrow viewports are exercised; full assistive-technology/platform conformance is not inferred from static checks.
+
+## eRental 2.0 presentation and navigation contract
+
+The approved November 18 redesign brief changes visual identity throughout the existing app; earlier references to preserving teal/light-only navigation are superseded. Business/API/security evidence above remains authoritative. No Supabase schema, grants, RLS, Storage rules or RPC definitions change in this redesign.
+
+- `ThemeProvider` / `ThemeControl` own light, dark and system preferences. Only the theme preference is stored under `erental-theme`; an early HTML script applies the resolved mode before startup. System media changes and other-tab preferences update the active mode. Native select popup geometry is accepted for theme/filter/account controls; native date popup remains accepted for booking dates.
+- `Brand` and `Icon` own shared identity and iconography; `PageHeading`, `.btn`, `.field`, `LoadError`, `EmptyState` and `ListingSkeleton` own shared presentation. Runtime semantic tokens in `tokens.css` supply both themes, including private dialogs and alerts.
+- Desktop account navigation uses native details/summary, not ARIA menu semantics. Escape/outside interaction closes it; route changes close disclosures. Mobile navigation uses a separately composed disclosure with a clear toggle, expanded state and Escape focus recovery. Admin routes and navigation retain the existing authoritative role checks.
+- Browse commits existing filters on Search, keeps existing URL keys and Load more/stale-response behavior. Mobile filter disclosure keeps keyword/search immediately available. Search clears act immediately and restore input focus. IME composition cannot accidentally submit the homepage search.
+- Create/edit/profile retain existing mutation destinations, values on failure and retry identities. `UnsavedChangesGuard` owns app-linked navigation confirmation and actual unload warnings. BrowserRouter does not safely block browser Back/Forward history traversal; this known limitation is reported rather than simulating history ownership. No sensitive verification documents/drafts are stored persistently.
+- Bookings preserve renter/owner transitions, price computation and simulated-payment RPC. Confirmation names significant actions. Payments remain explicitly simulated. Reviews and reports preserve existing payloads and eligibility.
+- Inbox/conversations retain their existing periodic refresh model and read-marker semantics. Refresh controls do not claim realtime delivery. No new chat backend or delivery guarantees are introduced.
+- Removed owner listings retain the existing visibility behavior; the interface does not invent a removed-history API. Non-sensitive page status filters may use URL parameters; actual data and permission checks remain server-owned.
+- Canonical CRUD evidence remains the existing reliability/core/verification tests; `tests/e2e/redesign.spec.js` adds theme, responsive and shared-control checks. Browser fixture tests never establish live RLS or production readiness.
