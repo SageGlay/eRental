@@ -2,7 +2,7 @@
 
 A React marketplace prototype for renting and listing items and properties in Iligan City. One account can rent and own listings. Supabase provides authentication, Postgres/RLS and photo storage; payments are simulated.
 
-Detailed guides: [Local setup and testing](LOCAL_SETUP_AND_TESTING.md), [verification contract export and acceptance tests](VERIFICATION_TESTING.md), [verification milestone history](MILESTONE_STATUS.md), and the [2.0 redesign handoff](REDESIGN.md).
+Detailed guides: [Local setup and testing](LOCAL_SETUP_AND_TESTING.md), [verification contract export and acceptance tests](VERIFICATION_TESTING.md), [verification milestone history](MILESTONE_STATUS.md), the [2.0 redesign handoff](REDESIGN.md), and the [Milestone 3 integration and security handoff](MILESTONE_3_HANDOFF.md).
 
 The redesigned interface includes Light, Dark and System themes, self-hosted Manrope/DM Sans typography, an original SVG brand and responsive renter/owner/admin workflows. [DESIGN.md](DESIGN.md) records visual intent; [UX-CONTRACT.md](UX-CONTRACT.md) records behavioral ownership.
 
@@ -17,7 +17,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from the environment or a local `.env` file. Restart Vite after changing them. Both values are exposed in the frontend bundle; never supply a service-role key, secret key or database password. `.env` files are ignored by Git.
+The app reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from the environment or a local `.env` file. Use the plain project URL from Supabase Connect, without a query string or credentials, and the matching public publishable or anon key. Restart Vite after changing settings. Validated public values are available in the browser bundle. Keep service-role keys, secret keys and database passwords out of frontend settings. `.env` files are ignored by Git.
 
 ```sh
 npm run build
