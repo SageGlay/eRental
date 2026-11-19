@@ -12,7 +12,7 @@ import Dialog from '../components/Dialog.jsx'
 import '../styles/owner-management.css'
 
 const FIELDS =
-  'id, title, price, price_period, status, categories(name), listing_photos(storage_path, sort_order)'
+  'id, title, price, price_period, status, location_text, categories(name), listing_photos(storage_path, sort_order)'
 
 function ListingThumbnail({ listing }) {
   const [failed, setFailed] = useState(false)
@@ -38,7 +38,12 @@ function ListingThumbnail({ listing }) {
 
 export default function MyListings() {
   const { user } = useAuth()
+  return <OwnerCollection key={user.id} ownerId={user.id} />
+}
+
+function OwnerCollection({ ownerId }) {
   const [params, setParams] = useSearchParams()
+  const query = params.get('q') || ''
   const [state, setState] = useState({
     listings: [],
     loading: true,
@@ -56,19 +61,22 @@ export default function MyListings() {
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
     setState((current) => ({ ...current, loading: true, error: null }))
     supabase
       .from('listings')
       .select(FIELDS)
-      .eq('owner_id', user.id)
+      .eq('owner_id', ownerId)
       .neq('status', 'removed')
       .order('created_at', { ascending: false })
+      .abortSignal(controller.signal)
       .then(({ data, error }) => {
         if (!cancelled)
           setState({
             listings: data ?? [],
             loading: false,
-            error: error ? error.message : null,
+            error: error ? 'Check your connection and try again.' : null,
           })
       })
       .catch((error) => {
@@ -80,26 +88,56 @@ export default function MyListings() {
               error.message || 'Please check your connection and try again.',
           }))
       })
+      .finally(() => clearTimeout(timer))
     return () => {
       cancelled = true
+      clearTimeout(timer)
+      controller.abort()
     }
-  }, [user.id, loadAttempt])
+  }, [ownerId, loadAttempt])
 
   async function changeStatus(listing, nextStatus) {
     if (mutationBusy.current) return
     mutationBusy.current = true
     setBusyId(listing.id)
     setNotice(null)
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
+    function refreshAfterChange(message) {
+      setConfirmId(null)
+      setNotice({ error: true, text: message })
+      setLoadAttempt((attempt) => attempt + 1)
+      requestAnimationFrame(() => noticeRef.current?.focus())
+    }
     try {
-      const { data, error } = await supabase
+      const {
+        data,
+        error,
+        status: responseStatus,
+      } = await supabase
         .from('listings')
         .update({ status: nextStatus })
         .eq('id', listing.id)
+        .eq('owner_id', ownerId)
+        .eq('status', listing.status)
         .select('id')
-      if (error || !data?.length) {
+        .abortSignal(controller.signal)
+      if (error && (!responseStatus || responseStatus >= 500)) {
+        refreshAfterChange(
+          `We couldn’t confirm the update to “${listing.title}”. Check the refreshed list before trying again.`,
+        )
+        return
+      }
+      if (!error && !data?.length) {
+        refreshAfterChange(
+          `“${listing.title}” changed or is no longer accessible. Check the refreshed list before trying again.`,
+        )
+        return
+      }
+      if (error) {
         setNotice({
           error: true,
-          text: `We couldn’t update “${listing.title}”. ${error ? error.message : 'Please try again.'}`,
+          text: `We couldn’t update “${listing.title}”. ${error.message || 'Please try again.'}`,
         })
         return
       }
@@ -121,12 +159,12 @@ export default function MyListings() {
             : `“${listing.title}” is now ${nextStatus}.`,
       })
       requestAnimationFrame(() => noticeRef.current?.focus())
-    } catch (error) {
-      setNotice({
-        error: true,
-        text: `We couldn’t update “${listing.title}”. ${error.message || 'Check your connection and try again.'}`,
-      })
+    } catch {
+      refreshAfterChange(
+        `We couldn’t confirm the update to “${listing.title}”. Check the refreshed list before trying again.`,
+      )
     } finally {
+      clearTimeout(timer)
       mutationBusy.current = false
       setBusyId(null)
     }
@@ -140,21 +178,32 @@ export default function MyListings() {
   }
 
   const { listings, loading, error } = state
-  const visible =
-    status === 'all'
-      ? listings
-      : listings.filter((listing) => listing.status === status)
+  const normalized = query.trim().toLowerCase()
+  const visible = listings.filter(
+    (listing) =>
+      (status === 'all' || listing.status === status) &&
+      (!normalized ||
+        listing.title.toLowerCase().includes(normalized) ||
+        listing.location_text?.toLowerCase().includes(normalized)),
+  )
+  function changeQuery(value) {
+    const next = new URLSearchParams(params)
+    if (value) next.set('q', value)
+    else next.delete('q')
+    setParams(next, { replace: true })
+  }
+
   const removing = listings.find((listing) => listing.id === confirmId)
   return (
     <section className="container page owner-workspace">
       <PageHeading
-        eyebrow="Your owner space"
+        eyebrow="Owner workspace"
         title="My listings"
         actions={
           <>
-            <Link className="btn btn-ghost" to="/bookings">
+            <Link className="btn btn-ghost" to="/bookings?tab=incoming">
               <Icon name="calendar" />
-              View bookings
+              Incoming requests
             </Link>
             <Link className="btn btn-primary" to="/list">
               <Icon name="plus" />
@@ -163,30 +212,48 @@ export default function MyListings() {
           </>
         }
       >
-        <p>
-          Keep your rentals up to date, manage availability and make room for
-          your next booking.
-        </p>
+        <p>Set which listings can accept new requests.</p>
       </PageHeading>
       <div className="owner-workspace__toolbar">
-        <div>
-          <h2>Your rental collection</h2>
-          <p>
-            Available listings can receive requests. Mark a listing unavailable
-            when you’re not ready to rent it out.
-          </p>
+        <div
+          className="owner-workspace__filters"
+          aria-label="Show listings"
+          role="group"
+        >
+          {[
+            ['all', 'All listings'],
+            ['available', 'Available'],
+            ['unavailable', 'Unavailable'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={status === value}
+              onClick={() => setStatus(value)}
+            >
+              {label}
+              {!loading && !error && (
+                <span>
+                  {value === 'all'
+                    ? listings.length
+                    : listings.filter((item) => item.status === value).length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
-        <div className="field">
-          <label htmlFor="owner-listing-status">Show listings</label>
-          <select
-            id="owner-listing-status"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="all">All listings</option>
-            <option value="available">Available</option>
-            <option value="unavailable">Unavailable</option>
-          </select>
+        <div className="owner-workspace__search">
+          <Icon name="search" size={16} />
+          <label className="sr-only" htmlFor="owner-query">
+            Find a listing by title or location
+          </label>
+          <input
+            id="owner-query"
+            type="search"
+            value={query}
+            placeholder="Find by title or location"
+            onChange={(event) => changeQuery(event.target.value)}
+          />
         </div>
       </div>
       {notice && (!removing || !notice.error) && (
@@ -207,7 +274,7 @@ export default function MyListings() {
       )}
       {error && (
         <LoadError onRetry={() => setLoadAttempt((attempt) => attempt + 1)}>
-          We couldn’t load your listings ({error}).
+          We couldn’t load your listings. {error}
         </LoadError>
       )}
       {!loading && !error && (
@@ -235,22 +302,25 @@ export default function MyListings() {
       {!loading && !error && listings.length > 0 && visible.length === 0 && (
         <EmptyState
           icon={<Icon name="grid" size={32} />}
-          title={`No ${status} listings`}
+          title={
+            normalized
+              ? 'No listings match your search'
+              : `No ${status} listings`
+          }
           action={
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => setStatus('all')}
+              onClick={() => setParams({})}
             >
               Show all listings
             </button>
           }
         >
-          Your other rentals are still in your collection. Change the filter to
-          see them.
+          Try another title, location or availability filter.
         </EmptyState>
       )}
-      {!error && (
+      {!loading && !error && (
         <ul
           className="my-listings owner-workspace__list"
           aria-label="Your listings"
@@ -272,71 +342,65 @@ export default function MyListings() {
                     <span className="owner-listing__category">
                       {listing.categories?.name}
                     </span>
-                    <span
-                      className={`owner-listing__status ${available ? 'owner-listing__status--available' : ''}`}
-                    >
-                      <span aria-hidden="true" />
-                      {available ? 'Available' : 'Unavailable'}
-                    </span>
                   </div>
                   <h3>
                     <Link to={`/listings/${listing.id}`}>{listing.title}</Link>
                   </h3>
+                  {listing.location_text && (
+                    <p className="owner-listing__location">
+                      <Icon name="mapPin" size={14} /> {listing.location_text}
+                    </p>
+                  )}
+                </div>
+                <div className="owner-listing__rental">
+                  <span
+                    className={`owner-listing__status ${available ? 'owner-listing__status--available' : ''}`}
+                  >
+                    <span aria-hidden="true" />
+                    {available ? 'Available' : 'Unavailable'}
+                  </span>
                   <p className="owner-listing__rate">
                     {formatRate(listing.price, listing.price_period)}
                   </p>
-                  <div className="my-listing__actions owner-listing__actions">
-                    <Link className="btn" to={`/listings/${listing.id}/edit`}>
-                      <Icon name="sliders" size={16} />
-                      Edit
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      disabled={busyId !== null}
-                      onClick={() =>
-                        changeStatus(
-                          listing,
-                          available ? 'unavailable' : 'available',
-                        )
-                      }
-                    >
-                      {busyId === listing.id
-                        ? 'Updating…'
-                        : available
-                          ? 'Mark unavailable'
-                          : 'Mark available'}
-                    </button>
-                    <Link
-                      className="btn btn-ghost"
-                      to={`/listings/${listing.id}`}
-                    >
-                      View details
-                      <Icon name="arrowRight" size={16} />
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn btn-ghost owner-listing__remove"
-                      disabled={busyId !== null}
-                      onClick={() => {
-                        setNotice(null)
-                        setConfirmId(listing.id)
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
+                </div>
+                <div className="my-listing__actions owner-listing__actions">
+                  <Link className="btn" to={`/listings/${listing.id}/edit`}>
+                    <Icon name="sliders" size={16} />
+                    Edit
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={busyId !== null}
+                    onClick={() =>
+                      changeStatus(
+                        listing,
+                        available ? 'unavailable' : 'available',
+                      )
+                    }
+                  >
+                    {busyId === listing.id
+                      ? 'Updating…'
+                      : available
+                        ? 'Mark unavailable'
+                        : 'Mark available'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost owner-listing__remove"
+                    disabled={busyId !== null}
+                    onClick={() => {
+                      setNotice(null)
+                      setConfirmId(listing.id)
+                    }}
+                  >
+                    Remove
+                  </button>
                 </div>
               </li>
             )
           })}
         </ul>
-      )}
-      {!loading && listings.length > 0 && (
-        <p className="owner-workspace__footnote">
-          <Icon name="box" size={16} />
-          Removed listings no longer appear in this collection.
-        </p>
       )}
       {removing && (
         <Dialog
