@@ -58,7 +58,7 @@ test('login rejects wrong credentials and recovers with the existing sign-in flo
   await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await expect(
     page.getByRole('heading', {
-      name: 'Rent almost anything, all in one place.',
+      name: 'Rent it in Iligan.',
     }),
   ).toBeVisible()
   expect(calls(model, '/auth/v1/token', 'POST')).toHaveLength(2)

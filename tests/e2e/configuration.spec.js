@@ -152,7 +152,7 @@ for (const [name, url, key] of [
         })
         await page.goto(configuredApp)
         await expect(
-          page.getByRole('heading', { name: /Rent almost anything/ }),
+          page.getByRole('heading', { name: 'Rent it in Iligan.' }),
         ).toBeVisible()
         await expect(
           page.getByRole('link', { name: /Electronics and Gadgets/ }),
