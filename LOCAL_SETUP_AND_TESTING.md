@@ -117,3 +117,17 @@ The current cloud environment has both required variable bindings, but the netwo
 My profile links to `/verification`; the existing admin area links to `/admin/verification`. Follow [VERIFICATION_TESTING.md](VERIFICATION_TESTING.md) for regular-user, business-user and administrator walkthroughs.
 
 The project owner supplied the applied verification contract, now recorded in `supabase/contracts/verification.json`. No replacement project or migration deployment is required to use those existing endpoints. A separate, **undeployed** RPC-hardening proposal addresses concurrent review/profile changes; review and test it before production use. Live connection/security checks still require the Supabase hostname to be reachable.
+
+## eRental 3.0 password recovery and screenshot checks
+
+Use a designated staging project and a consenting test mailbox to exercise recovery delivery. In Supabase Authentication → URL Configuration, allow the exact callback for the deployed origin, for example `http://localhost:5173/reset-password` for local Vite. Configure the standard recovery email to use the Supabase confirmation link. The app expects the implicit recovery callback from that link. Keep session tokens and received links out of issue reports. Direct visits to `/reset-password` without a recovery callback offer a fresh link.
+
+To reproduce the redesign screenshots with fictional API responses, run the fixture matrix with an output directory outside the repository.
+
+```powershell
+$env:ERENTAL_SCREENSHOT_DIR = Join-Path $env:TEMP 'erental-v3-screens'
+npx playwright test tests/e2e/redesign.spec.js
+Remove-Item Env:ERENTAL_SCREENSHOT_DIR
+```
+
+The full browser suite remains `npm test`. The separate `npm run test:db` requires Docker and runs the verification contract in disposable local PostgreSQL. [Redesign handoff](ERENTAL_3_HANDOFF.md)
