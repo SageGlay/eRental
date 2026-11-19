@@ -55,6 +55,9 @@ function OwnerCollection({ ownerId }) {
   const [confirmId, setConfirmId] = useState(null)
   const [notice, setNotice] = useState(null)
   const noticeRef = useRef(null)
+  useEffect(() => {
+    if (notice) noticeRef.current?.focus()
+  }, [notice])
   const status = ['available', 'unavailable'].includes(params.get('status'))
     ? params.get('status')
     : 'all'
@@ -107,7 +110,6 @@ function OwnerCollection({ ownerId }) {
       setConfirmId(null)
       setNotice({ error: true, text: message })
       setLoadAttempt((attempt) => attempt + 1)
-      requestAnimationFrame(() => noticeRef.current?.focus())
     }
     try {
       const {
@@ -122,7 +124,10 @@ function OwnerCollection({ ownerId }) {
         .eq('status', listing.status)
         .select('id')
         .abortSignal(controller.signal)
-      if (error && (!responseStatus || responseStatus >= 500)) {
+      if (
+        error &&
+        (!responseStatus || responseStatus === 408 || responseStatus >= 500)
+      ) {
         refreshAfterChange(
           `We couldn’t confirm the update to “${listing.title}”. Check the refreshed list before trying again.`,
         )
@@ -158,7 +163,6 @@ function OwnerCollection({ ownerId }) {
             ? `“${listing.title}” was removed.`
             : `“${listing.title}” is now ${nextStatus}.`,
       })
-      requestAnimationFrame(() => noticeRef.current?.focus())
     } catch {
       refreshAfterChange(
         `We couldn’t confirm the update to “${listing.title}”. Check the refreshed list before trying again.`,

@@ -65,8 +65,11 @@ export default function CreateListing({ listing: existing = null }) {
   const [removedPhotos, setRemovedPhotos] = useState([])
   const [error, setError] = useState('')
   const [invalidField, setInvalidField] = useState('')
-  const [photoFeedback, setPhotoFeedback] = useState('')
+  const [photoFeedback, setPhotoFeedback] = useState(null)
   const photoFeedbackRef = useRef(null)
+  useEffect(() => {
+    if (photoFeedback) photoFeedbackRef.current?.focus()
+  }, [photoFeedback])
   const [savedId, setSavedId] = useState(null)
   const [attemptedSave, setAttemptedSave] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -121,13 +124,12 @@ export default function CreateListing({ listing: existing = null }) {
   }
 
   function confirmPhotoChange(message) {
-    setPhotoFeedback(message)
-    requestAnimationFrame(() => photoFeedbackRef.current?.focus())
+    setPhotoFeedback({ message })
   }
 
   function onFiles(e) {
     const picked = [...e.target.files]
-    setPhotoFeedback('')
+    setPhotoFeedback(null)
     e.target.value = ''
     const bad = picked.find(
       (f) => !ACCEPTED_TYPES[f.type] || !f.size || f.size > MAX_PHOTO_BYTES,
@@ -261,7 +263,7 @@ export default function CreateListing({ listing: existing = null }) {
     submitting.current = true
     setBusy(true)
     setAttemptedSave(true)
-    setPhotoFeedback('')
+    setPhotoFeedback(null)
 
     const cleanDetails = Object.fromEntries(
       Object.entries(details).filter(([, v]) => String(v).trim() !== ''),
@@ -592,13 +594,25 @@ export default function CreateListing({ listing: existing = null }) {
                 </div>
                 {!existing && (
                   <div className="field">
-                    <label htmlFor="opening-status">Availability at publication</label>
-                    <select id="opening-status" value={form.availability} onChange={set('availability')} disabled={attemptedSave} aria-describedby="opening-status-hint">
+                    <label htmlFor="opening-status">
+                      Availability at publication
+                    </label>
+                    <select
+                      id="opening-status"
+                      value={form.availability}
+                      onChange={set('availability')}
+                      disabled={attemptedSave}
+                      aria-describedby="opening-status-hint"
+                    >
                       <option value="available">Available for requests</option>
-                      <option value="unavailable">Unavailable for requests</option>
+                      <option value="unavailable">
+                        Unavailable for requests
+                      </option>
                     </select>
                     <span id="opening-status-hint" className="field__hint">
-                      {attemptedSave ? 'After the first save attempt, change availability in My listings.' : 'Both options publish the listing. Unavailable listings cannot receive booking requests.'}
+                      {attemptedSave
+                        ? 'After the first save attempt, change availability in My listings.'
+                        : 'Both options publish the listing. Unavailable listings cannot receive booking requests.'}
                     </span>
                   </div>
                 )}
@@ -642,7 +656,7 @@ export default function CreateListing({ listing: existing = null }) {
                     tabIndex={-1}
                     role="status"
                   >
-                    {photoFeedback}
+                    {photoFeedback.message}
                   </p>
                 )}
                 {photos.length > 0 && (

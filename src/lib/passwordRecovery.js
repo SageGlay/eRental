@@ -7,8 +7,10 @@ const resetPath = '/reset-password'
 function consumeRecoveryFragment() {
   if (typeof window === 'undefined') return null
   const path = window.location.pathname.replace(/\/+$/, '').toLowerCase()
-  if (path !== resetPath) return null
   const fragment = new URLSearchParams(window.location.hash.slice(1))
+  // Supabase may fall back to the configured Site URL instead of the requested
+  // redirect. Route its recovery session before the ordinary client sees it.
+  if (path !== resetPath && fragment.get('type') !== 'recovery') return null
   window.history.replaceState(window.history.state, '', resetPath)
   if (fragment.has('error') || fragment.get('type') !== 'recovery') return null
   const access_token = fragment.get('access_token')

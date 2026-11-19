@@ -30,7 +30,7 @@
 .owner-editor__index strong { display: block; font-size: .9375rem; }
 .owner-editor__index small { display: block; margin-top: var(--s1); color: var(--muted); font-size: .8125rem; }
 .owner-editor__index .icon { margin-left: auto; color: var(--success-text); }
-.owner-editor__step { color: var(--muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.owner-editor__step { flex: none; white-space: nowrap; color: var(--muted); font-size: .8125rem; font-variant-numeric: tabular-nums; }
 .owner-editor__section, .owner-editor__submit {
   min-width: 0;
   padding: var(--s5);

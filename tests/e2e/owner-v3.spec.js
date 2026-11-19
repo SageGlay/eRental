@@ -19,6 +19,9 @@ test('an owner can inspect public terms and choose the cover before the first wr
   await fillListing(page)
   await page.getByLabel('Deposit (₱, optional)').fill('500')
   await page
+    .getByLabel('Availability at publication')
+    .selectOption('unavailable')
+  await page
     .getByLabel('Terms, rules and requirements (optional)')
     .fill('Return the lens with its cap.')
   await page
@@ -38,7 +41,7 @@ test('an owner can inspect public terms and choose the cover before the first wr
     '₱200 / day',
     '₱500',
     'Tibanga, Iligan City',
-    'Available',
+    'Unavailable',
     'Return the lens with its cap.',
   ]) {
     await expect(review).toContainText(term)
@@ -48,6 +51,9 @@ test('an owner can inspect public terms and choose the cover before the first wr
   await expect(page).toHaveURL(/\/listings\//)
   expect(model.photos.map((photo) => photo.sort_order)).toEqual([0, 1])
   expect(calls(model, '/rest/v1/listings', 'POST')).toHaveLength(1)
+  expect(calls(model, '/rest/v1/listings', 'POST')[0].body.status).toBe(
+    'unavailable',
+  )
 })
 
 test('edit restores an existing photo before save without deleting or uploading anything', async ({
@@ -115,34 +121,41 @@ test('owner inventory filters persist and incoming requests open the owner booki
   await expect(page).toHaveURL(/\/bookings\?tab=incoming$/)
 })
 
-test('a lost owner status response refreshes inventory before another availability change', async ({
-  page,
-}) => {
-  let status = 'available'
-  let updates = 0
-  await mockMarketplace(page, async (route, { url, method, body }) => {
-    if (url.pathname !== '/rest/v1/listings') return false
-    if (method === 'PATCH') {
-      expect(url.searchParams.get('owner_id')).toBe(`eq.${USER_ID}`)
-      expect(url.searchParams.get('status')).toBe('eq.available')
-      status = body.status
-      updates++
-      await route.abort('failed')
-    } else {
-      await json(route, [{ ...listing, owner_id: USER_ID, status }])
-    }
-    return true
+for (const [name, response] of [
+  ['a lost owner status response', null],
+  ['an HTTP 408 owner status response', 408],
+]) {
+  test(`${name} refreshes inventory before another availability change`, async ({
+    page,
+  }) => {
+    let status = 'available'
+    let updates = 0
+    await mockMarketplace(page, async (route, { url, method, body }) => {
+      if (url.pathname !== '/rest/v1/listings') return false
+      if (method === 'PATCH') {
+        expect(url.searchParams.get('owner_id')).toBe(`eq.${USER_ID}`)
+        expect(url.searchParams.get('status')).toBe('eq.available')
+        status = body.status
+        updates++
+        if (response)
+          await json(route, { message: 'Request timed out' }, response)
+        else await route.abort('failed')
+      } else {
+        await json(route, [{ ...listing, owner_id: USER_ID, status }])
+      }
+      return true
+    })
+    await page.goto('/my-listings')
+    await page.getByRole('button', { name: 'Mark unavailable' }).click()
+    const alert = page.getByRole('alert')
+    await expect(alert).toContainText('couldn’t confirm')
+    await expect(alert).toBeFocused()
+    await expect(
+      page.getByRole('button', { name: 'Mark available' }),
+    ).toBeVisible()
+    expect(updates).toBe(1)
   })
-  await page.goto('/my-listings')
-  await page.getByRole('button', { name: 'Mark unavailable' }).click()
-  const alert = page.getByRole('alert')
-  await expect(alert).toContainText('couldn’t confirm')
-  await expect(alert).toBeFocused()
-  await expect(
-    page.getByRole('button', { name: 'Mark available' }),
-  ).toBeVisible()
-  expect(updates).toBe(1)
-})
+}
 
 test('editor validation identifies the first missing field next to the focused control', async ({
   page,

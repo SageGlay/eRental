@@ -116,3 +116,106 @@ test.describe('Calendar-only rental itinerary', () => {
     await expect(card.getByRole('button', { name: /^Pay / })).toHaveCount(0)
   })
 })
+
+test('opening a booking conversation requires a successful lookup and recovers a lost create response', async ({
+  page,
+}) => {
+  let canRead = false
+  let created = false
+  const model = await mockMarketplace(page, async (route, { url, method }) => {
+    if (url.pathname === '/rest/v1/bookings') {
+      await json(route, [
+        {
+          id: 'booking-fixture',
+          status: 'pending',
+          start_date: '2099-01-10',
+          end_date: '2099-01-11',
+          price: 200,
+          price_period: 'day',
+          deposit: 50,
+          listings: { id: LISTING_ID, title: 'Travel camera' },
+          simulated_payments: [],
+          reviews: [],
+        },
+      ])
+      return true
+    }
+    if (url.pathname !== '/rest/v1/conversations') return false
+    if (!canRead) await json(route, { message: 'Unavailable' }, 500)
+    else if (method === 'POST') {
+      created = true
+      await json(route, { message: 'Lost response' }, 503)
+    } else
+      await json(
+        route,
+        created
+          ? [{ ...tara, listings: { id: LISTING_ID, title: 'Travel camera' } }]
+          : [],
+      )
+    return true
+  })
+  await page.goto('/bookings')
+  const contact = page.getByRole('button', { name: 'Message owner' })
+  await contact.click()
+  await expect(page.getByRole('alert')).toContainText(
+    'couldn’t open the conversation',
+  )
+  expect(calls(model, '/rest/v1/conversations', 'POST')).toHaveLength(0)
+  canRead = true
+  await contact.click()
+  await expect(page).toHaveURL(/\/messages\/tara-thread$/)
+  await expect(page.getByRole('heading', { name: 'Tara' })).toBeVisible()
+  expect(calls(model, '/rest/v1/conversations', 'POST')).toHaveLength(1)
+})
+
+test('an uncertain review keeps its draft and checks the saved review before any new submission', async ({
+  page,
+}) => {
+  let savedReview
+  const model = await mockMarketplace(
+    page,
+    async (route, { url, method, body }) => {
+      if (url.pathname === '/rest/v1/bookings') {
+        await json(route, [
+          {
+            id: 'completed-rental',
+            status: 'completed',
+            start_date: '2025-03-01',
+            end_date: '2025-03-03',
+            price: 200,
+            price_period: 'day',
+            deposit: 50,
+            listings: { id: LISTING_ID, title: 'Travel camera' },
+            simulated_payments: [],
+            reviews: savedReview ? [savedReview] : [],
+          },
+        ])
+        return true
+      }
+      if (url.pathname !== '/rest/v1/reviews') return false
+      if (method === 'POST') {
+        savedReview = { rating: body.rating, comment: body.comment }
+        await json(route, { message: 'Lost response' }, 503)
+      } else {
+        expect(url.searchParams.get('booking_id')).toBe('eq.completed-rental')
+        expect(url.searchParams.get('reviewer_id')).toBe('eq.' + USER_ID)
+        await json(route, [savedReview])
+      }
+      return true
+    },
+  )
+  await page.goto('/bookings')
+  await page.getByRole('button', { name: 'Leave a review' }).click()
+  await page.getByRole('radio', { name: '4 stars' }).check()
+  const comment = page.getByLabel('Comment (optional)')
+  await comment.fill('The camera and case were clean.')
+  await page.getByRole('button', { name: 'Submit review' }).click()
+  await expect(comment).toHaveValue('The camera and case were clean.')
+  await expect(comment).toBeDisabled()
+  await page.getByRole('button', { name: 'Check saved review' }).click()
+  await expect(page.getByText('Your review is already saved.')).toBeVisible()
+  await expect(
+    page.getByText('Your review: “The camera and case were clean.”'),
+  ).toBeVisible()
+  expect(calls(model, '/rest/v1/reviews', 'POST')).toHaveLength(1)
+})

@@ -73,8 +73,8 @@ function RequestReset() {
             your inbox and spam folder.
           </p>
           <div className="account-entry__actions">
-            <Link className="btn btn-primary" to="/login">
-              Back to log in
+            <Link className="btn btn-primary" to={user ? '/profile' : '/login'}>
+              {user ? 'Return to my profile' : 'Back to log in'}
             </Link>
             <button
               type="button"
@@ -127,6 +127,7 @@ function RequestReset() {
 }
 
 function ChoosePassword() {
+  const { user } = useAuth()
   const [state, setState] = useState('checking')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -244,8 +245,8 @@ function ChoosePassword() {
           >
             Password updated. Use your new password the next time you log in.
           </p>
-          <Link className="btn btn-primary" to="/login">
-            Back to log in
+          <Link className="btn btn-primary" to={user ? '/profile' : '/login'}>
+            {user ? 'Return to my profile' : 'Back to log in'}
           </Link>
         </>
       )}

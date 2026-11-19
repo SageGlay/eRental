@@ -354,9 +354,9 @@ function BookingCard({ b, role, onChange, onResult }) {
           <div className="booking-card__review">
             <ReviewForm
               bookingId={b.id}
-              onDone={async () => {
+              onDone={async (message) => {
                 await onChange()
-                onResult('Review submitted.')
+                onResult(message)
               }}
             />
           </div>

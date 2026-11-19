@@ -162,6 +162,24 @@ test('an emailed link changes only its verified account and preserves the regula
   await expect(page.getByRole('alert')).toContainText('fresh link')
 })
 
+test('a recovery link at the configured site root stays separate from the signed-in account', async ({ page }) => {
+  const recovered = sessionFor(OWNER_ID)
+  recovered.user.email = 'recovery-member@example.test'
+  await mockMarketplace(page, async (route, { url, method }) => {
+    if (url.pathname !== '/auth/v1/user' || method !== 'GET') return false
+    await json(route, recovered.user)
+    return true
+  })
+  await page.goto('/#' + new URLSearchParams({
+    type: 'recovery',
+    access_token: recovered.access_token,
+    refresh_token: recovered.refresh_token,
+  }))
+  await expect(page).toHaveURL(/\/reset-password$/)
+  await expect(page.getByText('Change the eRental password for recovery-member@example.test.')).toBeVisible()
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('sb-test-project-auth-token')).user.id)).toBe(USER_ID)
+})
+
 test('settings persist the shared browser theme without modifying public identity', async ({
   page,
 }) => {

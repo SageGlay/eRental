@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Icon from './Icon.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import '../styles/account-auth.css'
 
 export default function AccountFormFrame({
@@ -9,15 +10,16 @@ export default function AccountFormFrame({
   returnTo,
   children,
 }) {
+  const { user } = useAuth()
   const signingIn = mode === 'login' || mode === 'register'
   return (
     <section className="container page account-entry">
       <Link
         className="account-entry__back"
-        to={signingIn ? '/listings' : '/login'}
+        to={signingIn || user ? '/listings' : '/login'}
       >
         <Icon name="arrowLeft" size={16} />
-        {signingIn ? 'Browse rentals' : 'Back to log in'}
+        {signingIn || user ? 'Browse rentals' : 'Back to log in'}
       </Link>
       <div className="account-entry__sheet">
         <header className="account-entry__head">

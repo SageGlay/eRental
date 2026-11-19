@@ -312,7 +312,9 @@ function Conversation({ id, user }) {
               onClick={refreshMessages}
             >
               <Icon name="refresh" size={18} />
-              <span>{refreshing ? 'Refreshing messages…' : 'Refresh messages'}</span>
+              <span>
+                {refreshing ? 'Refreshing messages…' : 'Refresh messages'}
+              </span>
             </button>
           </header>
           <aside className="conversation-context" aria-label="Rental context">
