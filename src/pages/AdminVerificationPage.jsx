@@ -11,6 +11,7 @@ import {
 import { formatDate } from '../lib/format.js'
 import AdminNavigation from '../components/AdminNavigation.jsx'
 import Dialog from '../components/Dialog.jsx'
+import PageHeading from '../components/PageHeading.jsx'
 import LoadError from '../components/LoadError.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import VerificationDocument from '../components/VerificationDocument.jsx'
@@ -36,7 +37,7 @@ function ReviewDialog({ request, onClose, onDone, onRefresh }) {
   const matchesAccount = Boolean(
     applicant &&
       verificationKind(applicant) === request.kind &&
-      (request.kind !== 'business' || applicant.business_name),
+      (request.kind !== 'business' || applicant.business_name?.trim()),
   )
   const canApprove = matchesAccount && isSafeVerificationPath(request)
   useEffect(() => {
@@ -142,7 +143,10 @@ function ReviewDialog({ request, onClose, onDone, onRefresh }) {
           before making a decision.
         </p>
         {request.details && (
-          <p className="prewrap">Applicant details: {request.details}</p>
+          <div className="verification-applicant-note">
+            <h3>Applicant note</h3>
+            <p className="prewrap">{request.details}</p>
+          </div>
         )}
         <VerificationDocument submission={request} />
         {request.status !== 'pending' ? (
@@ -164,7 +168,8 @@ function ReviewDialog({ request, onClose, onDone, onRefresh }) {
           </>
         ) : (
           <>
-            <div className="field">
+            <div className="field verification-decision-field">
+              <h3>Review decision</h3>
               <label htmlFor="review-note">
                 Review note (required for rejection)
               </label>
@@ -338,235 +343,222 @@ export default function AdminVerificationPage() {
           setNotice('')
           setSelected(r)
         }}
-        aria-label={`Review request from ${r.applicant?.display_name ?? 'applicant'}`}
+        aria-label={`${r.status === 'pending' ? 'Review request' : 'View decision'} from ${r.applicant?.display_name ?? 'applicant'}`}
       >
-        Review request
+        {r.status === 'pending' ? 'Review request' : 'View decision'}
+        <Icon name="arrowRight" size={16} />
       </button>
     )
   }
   return (
-    <section className="container page verification-page admin-verification-page">
+    <section className="container page moderation-workspace admin-verification-page">
       <AdminNavigation />
-      <header className="page-heading admin-verification-heading">
-        <div>
-          <p className="eyebrow">Administration · Account trust</p>
-          <h1 ref={heading} tabIndex={-1}>
-            Verification requests
-          </h1>
-          <p className="page-heading__lead">
-            Review identity and business documents, compare account details, and
-            give applicants a clear decision.
+      <div className="moderation-workspace__body">
+        <PageHeading titleRef={heading} title="Verification requests">
+          <p>
+            Compare each applicant’s current profile with their private document
+            before recording a decision.
           </p>
-        </div>
-        <span className="verification-private-label">
-          <Icon name="shield" size={18} />
-          Private document review
-        </span>
-      </header>
-      <div className="admin-verification-toolbar">
-        <div className="verification-filters">
-          <div className="field">
-            <label htmlFor="verification-status-filter">Status</label>
-            <select
-              id="verification-status-filter"
-              value={status}
-              onChange={(e) => update({ status: e.target.value })}
-            >
-              {['pending', 'approved', 'rejected'].map((s) => (
-                <option key={s} value={s}>
-                  {s[0].toUpperCase() + s.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="verification-sort">Sort by</label>
-            <select
-              id="verification-sort"
-              value={ascending ? 'oldest' : 'newest'}
-              onChange={(e) => update({ sort: e.target.value })}
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-            </select>
-          </div>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            disabled={requests.loading}
-            onClick={requests.refresh}
-          >
-            Refresh requests
-          </button>
-        </div>
-        <p className="verification-queue-guidance">
-          Open a request to view its document and review history. A verified
-          account badge does not verify individual listings.
-        </p>
-      </div>
-      <div className="admin-verification-queue" aria-busy={requests.loading}>
-        {notice && (
-          <p className="form-success" role="status">
-            {notice}
-          </p>
-        )}
-        {requests.error && (
-          <LoadError onRetry={requests.refresh}>{requests.error}</LoadError>
-        )}
-        {(requests.loading || requests.outOfRange) && (
-          <div className="verification-queue-loading" role="status">
-            <span className="verification-loading-mark" aria-hidden="true">
-              <Icon name="shield" size={24} />
-            </span>
-            <p>Loading verification requests…</p>
-          </div>
-        )}
-        {!requests.loading &&
-          !requests.outOfRange &&
-          !requests.error &&
-          !requests.rows.length && (
-            <EmptyState
-              icon={<Icon name="shield" size={32} />}
-              title={`No ${status} requests`}
-            >
-              Requests with this status will appear here. Choose another status
-              or refresh to check for updates.
-            </EmptyState>
-          )}
-        {!requests.loading && !requests.error && requests.rows.length > 0 && (
-          <>
-            <p className="field__hint verification-queue-range">
-              Showing {(page - 1) * 10 + 1}–
-              {Math.min(page * 10, requests.total)} of {requests.total} requests
-            </p>
-            <div className="verification-table">
-              <table>
-                <caption className="sr-only">
-                  {status} verification requests
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Applicant</th>
-                    <th scope="col">Request</th>
-                    <th
-                      scope="col"
-                      aria-sort={ascending ? 'ascending' : 'descending'}
-                    >
-                      <button
-                        type="button"
-                        onClick={() =>
-                          update({ sort: ascending ? 'newest' : 'oldest' })
-                        }
-                      >
-                        Submitted {ascending ? '↑' : '↓'}
-                      </button>
-                    </th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.rows.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <div className="verification-applicant-cell">
-                          <span
-                            className="verification-applicant-avatar"
-                            aria-hidden="true"
-                          >
-                            {(r.applicant?.display_name || 'A')
-                              .trim()
-                              .charAt(0)
-                              .toUpperCase()}
-                          </span>
-                          <div>
-                            <strong>
-                              {r.applicant?.display_name ?? 'Applicant'}
-                            </strong>
-                            {r.applicant?.business_name && (
-                              <span className="field__hint verification-block">
-                                {r.applicant.business_name}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        {r.kind === 'business' ? 'Business' : 'Identity'}
-                        <span className="field__hint verification-block">
-                          {DOCUMENT_LABELS[r.document_type]}
-                        </span>
-                      </td>
-                      <td>{formatDate(r.created_at)}</td>
-                      <td>
-                        <span
-                          className={`verification-queue-status verification-queue-status--${r.status}`}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td>{rowAction(r)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        </PageHeading>
+        <div className="admin-verification-toolbar">
+          <div className="verification-filters">
+            <div className="field">
+              <label htmlFor="verification-status-filter">Status</label>
+              <select
+                id="verification-status-filter"
+                value={status}
+                onChange={(e) => update({ status: e.target.value })}
+              >
+                {['pending', 'approved', 'rejected'].map((s) => (
+                  <option key={s} value={s}>
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
-            <ul className="verification-mobile-cards">
-              {requests.rows.map((r) => (
-                <li
-                  key={r.id}
-                  className="verification-card verification-queue-mobile-card"
-                >
-                  <div className="verification-queue-card-heading">
-                    <span
-                      className={`verification-queue-status verification-queue-status--${r.status}`}
-                    >
-                      {r.status}
-                    </span>
-                    <span className="field__hint">
-                      {formatDate(r.created_at)}
-                    </span>
-                  </div>
-                  <h2>{r.applicant?.display_name ?? 'Applicant'}</h2>
-                  {r.applicant?.business_name && (
-                    <p>{r.applicant.business_name}</p>
-                  )}
-                  <p>
-                    {r.kind === 'business' ? 'Business' : 'Identity'} ·{' '}
-                    {DOCUMENT_LABELS[r.document_type]}
-                  </p>
-                  {rowAction(r)}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-        {!requests.error && !requests.loading && requests.total > 0 && (
-          <nav
-            className="verification-pagination"
-            aria-label="Verification request pages"
-          >
+            <div className="field">
+              <label htmlFor="verification-sort">Sort by</label>
+              <select
+                id="verification-sort"
+                value={ascending ? 'oldest' : 'newest'}
+                onChange={(e) => update({ sort: e.target.value })}
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
             <button
               type="button"
               className="btn btn-ghost"
-              disabled={page <= 1}
-              onClick={() => update({ page: String(page - 1) })}
+              disabled={requests.loading}
+              onClick={requests.refresh}
             >
-              Previous
+              Refresh requests
             </button>
-            <span aria-current="page">
-              Page {page} of {pages}
-            </span>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              disabled={page >= pages}
-              onClick={() => update({ page: String(page + 1) })}
+          </div>
+        </div>
+        <div className="admin-verification-queue" aria-busy={requests.loading}>
+          {notice && (
+            <p className="form-success" role="status">
+              {notice}
+            </p>
+          )}
+          {requests.error && (
+            <LoadError onRetry={requests.refresh}>{requests.error}</LoadError>
+          )}
+          {(requests.loading || requests.outOfRange) && (
+            <div className="verification-queue-loading" role="status">
+              <span className="verification-loading-mark" aria-hidden="true">
+                <Icon name="shield" size={24} />
+              </span>
+              <p>Loading verification requests…</p>
+            </div>
+          )}
+          {!requests.loading &&
+            !requests.outOfRange &&
+            !requests.error &&
+            !requests.rows.length && (
+              <EmptyState
+                icon={<Icon name="shield" size={32} />}
+                title={`No ${status} requests`}
+              >
+                Requests with this status will appear here. Choose another
+                status or refresh to check for updates.
+              </EmptyState>
+            )}
+          {!requests.loading && !requests.error && requests.rows.length > 0 && (
+            <>
+              <p className="field__hint verification-queue-range">
+                Showing {(page - 1) * 10 + 1}–
+                {Math.min(page * 10, requests.total)} of {requests.total}{' '}
+                requests
+              </p>
+              <div className="verification-table">
+                <table>
+                  <caption className="sr-only">
+                    {status} verification requests
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Applicant</th>
+                      <th scope="col">Request</th>
+                      <th
+                        scope="col"
+                        aria-sort={ascending ? 'ascending' : 'descending'}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            update({ sort: ascending ? 'newest' : 'oldest' })
+                          }
+                        >
+                          Submitted {ascending ? '↑' : '↓'}
+                        </button>
+                      </th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {requests.rows.map((r) => (
+                      <tr key={r.id}>
+                        <td>
+                          <div className="verification-applicant-cell">
+                            <span
+                              className="verification-applicant-avatar"
+                              aria-hidden="true"
+                            >
+                              {(r.applicant?.display_name || 'A')
+                                .trim()
+                                .charAt(0)
+                                .toUpperCase()}
+                            </span>
+                            <div>
+                              <strong>
+                                {r.applicant?.display_name ?? 'Applicant'}
+                              </strong>
+                              {r.applicant?.business_name && (
+                                <span className="field__hint verification-block">
+                                  {r.applicant.business_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          {r.kind === 'business' ? 'Business' : 'Identity'}
+                          <span className="field__hint verification-block">
+                            {DOCUMENT_LABELS[r.document_type]}
+                          </span>
+                        </td>
+                        <td>{formatDate(r.created_at)}</td>
+                        <td>
+                          <span
+                            className={`verification-queue-status verification-queue-status--${r.status}`}
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td>{rowAction(r)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <ul className="verification-mobile-cards">
+                {requests.rows.map((r) => (
+                  <li key={r.id} className="verification-queue-mobile-card">
+                    <div className="verification-queue-card-heading">
+                      <span
+                        className={`verification-queue-status verification-queue-status--${r.status}`}
+                      >
+                        {r.status}
+                      </span>
+                      <span className="field__hint">
+                        {formatDate(r.created_at)}
+                      </span>
+                    </div>
+                    <h2>{r.applicant?.display_name ?? 'Applicant'}</h2>
+                    {r.applicant?.business_name && (
+                      <p>{r.applicant.business_name}</p>
+                    )}
+                    <p>
+                      {r.kind === 'business' ? 'Business' : 'Identity'} ·{' '}
+                      {DOCUMENT_LABELS[r.document_type]}
+                    </p>
+                    {rowAction(r)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {!requests.error && !requests.loading && requests.total > 0 && (
+            <nav
+              className="verification-pagination"
+              aria-label="Verification request pages"
             >
-              Next
-            </button>
-          </nav>
-        )}
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={page <= 1}
+                onClick={() => update({ page: String(page - 1) })}
+              >
+                Previous
+              </button>
+              <span aria-current="page">
+                Page {page} of {pages}
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={page >= pages}
+                onClick={() => update({ page: String(page + 1) })}
+              >
+                Next
+              </button>
+            </nav>
+          )}
+        </div>
       </div>
       {selected && (
         <ReviewDialog
