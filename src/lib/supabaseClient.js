@@ -1,3 +1,5 @@
+// Consume password-reset callbacks before initializing the ordinary account session.
+import './passwordRecovery.js'
 import { createClient } from '@supabase/supabase-js'
 
 function initializeSupabase(config) {

@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -91,6 +97,45 @@ function useBookings(column, userId) {
     }
   }, [load])
   return { ...state, reload: load }
+}
+
+const monthName = new Intl.DateTimeFormat('en-PH', {
+  month: 'short',
+  timeZone: 'UTC',
+})
+const weekdayName = new Intl.DateTimeFormat('en-PH', {
+  weekday: 'short',
+  timeZone: 'UTC',
+})
+
+function BookingDate({ date }) {
+  const start = new Date(date)
+  return (
+    <div className="booking-date" aria-hidden="true">
+      <span>{monthName.format(start)}</span>
+      <strong>{start.getUTCDate()}</strong>
+      <span>{weekdayName.format(start)}</span>
+    </div>
+  )
+}
+
+function PriceBreakdown({ estimate, simulated = false }) {
+  return (
+    <dl className="booking-costs">
+      <div>
+        <dt>Rental estimate</dt>
+        <dd>{formatPrice(estimate.rental)}</dd>
+      </div>
+      <div>
+        <dt>Deposit</dt>
+        <dd>{formatPrice(estimate.deposit)}</dd>
+      </div>
+      <div className="booking-costs__total">
+        <dt>{simulated ? 'Simulated payment total' : 'Estimated total'}</dt>
+        <dd>{formatPrice(estimate.total)}</dd>
+      </div>
+    </dl>
+  )
 }
 
 function BookingCard({ b, role, onChange, onResult }) {
@@ -229,10 +274,8 @@ function BookingCard({ b, role, onChange, onResult }) {
     <li className="booking booking-card">
       <div className="booking-card__content">
         <header className="booking-card__heading">
-          <div>
-            <p className="booking-card__eyebrow">
-              {isOwner ? 'Request for your listing' : 'Your rental request'}
-            </p>
+          <BookingDate date={b.start_date} />
+          <div className="booking-card__identity">
             <h3>
               {b.listings?.id ? (
                 <Link to={`/listings/${b.listings.id}`}>
@@ -242,75 +285,62 @@ function BookingCard({ b, role, onChange, onResult }) {
                 <span>Listing no longer available</span>
               )}
             </h3>
+            <p className="booking-card__range">
+              {formatRange(b.start_date, b.end_date)}
+            </p>
           </div>
           <span className={`status status--${b.status}`}>
             {STATUS_LABELS[b.status]}
           </span>
         </header>
-        <dl className="booking-card__details">
-          <div>
-            <dt>
-              <Icon name="calendar" size={16} /> Rental dates
-            </dt>
-            <dd>{formatRange(b.start_date, b.end_date)}</dd>
-          </div>
-          <div>
-            <dt>Rental rate</dt>
-            <dd>{formatRate(b.price, b.price_period)}</dd>
-          </div>
-          {isOwner && (
-            <div>
-              <dt>
-                <Icon name="user" size={16} /> Requested by
-              </dt>
-              <dd>{b.renter?.display_name || 'Renter'}</dd>
-            </div>
-          )}
-        </dl>
-        {b.message && (
-          <blockquote className="booking-card__note">
-            <span>Request message</span>
-            <p>“{b.message}”</p>
-          </blockquote>
-        )}
-        {b.owner_response && (
-          <div className="booking-card__note">
-            <span>Owner’s note</span>
-            <p>{b.owner_response}</p>
-          </div>
-        )}
-        {(paid.length > 0 || refunded.length > 0) && (
-          <div className="booking-card__payments">
-            {paid.length > 0 && (
-              <span className="status status--completed">
-                {isOwner ? 'Renter paid' : 'Paid'} (simulated) ·{' '}
-                {formatPrice(sum(paid))}
-              </span>
+        <div className="booking-card__body">
+          <div className="booking-card__terms">
+            <dl className="booking-card__details">
+              <div>
+                <dt>Rental rate</dt>
+                <dd>{formatRate(b.price, b.price_period)}</dd>
+              </div>
+              {isOwner && (
+                <div>
+                  <dt>
+                    <Icon name="user" size={16} /> Requested by
+                  </dt>
+                  <dd>{b.renter?.display_name || 'Renter'}</dd>
+                </div>
+              )}
+            </dl>
+            {b.message && (
+              <blockquote className="booking-card__note">
+                <span>Request message</span>
+                <p>“{b.message}”</p>
+              </blockquote>
             )}
-            {refunded.length > 0 && (
-              <span className="status status--cancelled">
-                Refunded (simulated) · {formatPrice(sum(refunded))}
-              </span>
+            {b.owner_response && (
+              <div className="booking-card__note">
+                <span>Owner’s note</span>
+                <p>{b.owner_response}</p>
+              </div>
+            )}
+            {(paid.length > 0 || refunded.length > 0) && (
+              <div className="booking-card__payments">
+                {paid.length > 0 && (
+                  <span className="status status--completed">
+                    {isOwner ? 'Renter paid' : 'Paid'} (simulated) ·{' '}
+                    {formatPrice(sum(paid))}
+                  </span>
+                )}
+                {refunded.length > 0 && (
+                  <span className="status status--cancelled">
+                    Refunded (simulated) · {formatPrice(sum(refunded))}
+                  </span>
+                )}
+              </div>
             )}
           </div>
-        )}
-        {canPay && (
           <div className="booking-card__estimate">
-            <div>
-              <span>Rental estimate</span>
-              <strong>{formatPrice(estimate.rental)}</strong>
-            </div>
-            <div>
-              <span>Deposit</span>
-              <strong>{formatPrice(estimate.deposit)}</strong>
-            </div>
-            <div className="booking-card__total">
-              <span>Simulated payment total</span>
-              <strong>{formatPrice(estimate.total)}</strong>
-            </div>
-            <p>No real money is charged. This is a payment simulation.</p>
+            <PriceBreakdown estimate={estimate} simulated={canPay} />
           </div>
-        )}
+        </div>
         {b.status === 'completed' && review && (
           <div className="booking-card__review">
             <StarRating value={review.rating} />
@@ -322,7 +352,13 @@ function BookingCard({ b, role, onChange, onResult }) {
         )}
         {b.status === 'completed' && !review && !isOwner && (
           <div className="booking-card__review">
-            <ReviewForm bookingId={b.id} onDone={onChange} />
+            <ReviewForm
+              bookingId={b.id}
+              onDone={async () => {
+                await onChange()
+                onResult('Review submitted.')
+              }}
+            />
           </div>
         )}
         {error && !confirm && (
@@ -339,7 +375,7 @@ function BookingCard({ b, role, onChange, onResult }) {
           </Link>
         )}
         <div className="booking__actions">
-          {!isOwner && b.listings && (
+          {!isOwner && b.listings?.id && (
             <button
               type="button"
               className="btn btn-ghost"
@@ -414,21 +450,7 @@ function BookingCard({ b, role, onChange, onResult }) {
             </dl>
           )}
           {confirm.status === 'simulate_payment' && (
-            <div className="booking-card__estimate">
-              <div>
-                <span>Rental estimate</span>
-                <strong>{formatPrice(estimate.rental)}</strong>
-              </div>
-              <div>
-                <span>Deposit</span>
-                <strong>{formatPrice(estimate.deposit)}</strong>
-              </div>
-              <div className="booking-card__total">
-                <span>Simulated payment total</span>
-                <strong>{formatPrice(estimate.total)}</strong>
-              </div>
-              <p>No real money is charged. This is a payment simulation.</p>
-            </div>
+            <PriceBreakdown estimate={estimate} simulated />
           )}
           {error && (
             <p className="form-error" role="alert">
@@ -560,9 +582,8 @@ function Panel({ role, userId, status, onStatusChange }) {
             {isOwner ? 'Your incoming requests' : 'Your rental activity'}
           </h2>
           <p>
-            {isOwner
-              ? 'Review requests and keep track of your rental schedule.'
-              : 'Follow your requests, arrange details and review completed rentals.'}
+            {rows.length} {rows.length === 1 ? 'booking' : 'bookings'} ·{' '}
+            {rows.filter((b) => b.status === 'pending').length} pending
           </p>
         </div>
         <div className="field">
@@ -641,6 +662,14 @@ function Panel({ role, userId, status, onStatusChange }) {
   )
 }
 
+const railQuery = '(min-width: 980px)'
+function observeRail(callback) {
+  const media = window.matchMedia(railQuery)
+  media.addEventListener('change', callback)
+  return () => media.removeEventListener('change', callback)
+}
+const hasRail = () => window.matchMedia(railQuery).matches
+
 export default function BookingsPage() {
   const { user } = useAuth()
   const [params, setParams] = useSearchParams()
@@ -649,13 +678,17 @@ export default function BookingsPage() {
     ? params.get('status')
     : ''
   const tabsRef = useRef([])
+  const vertical = useSyncExternalStore(observeRail, hasRail)
 
   function changeTab(next) {
     setParams(next === 'incoming' ? { tab: 'incoming' } : {})
   }
 
   function tabKey(e, index) {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+    const arrows = vertical
+      ? ['ArrowUp', 'ArrowDown']
+      : ['ArrowLeft', 'ArrowRight']
+    if (![...arrows, 'Home', 'End'].includes(e.key)) return
     e.preventDefault()
     const next = e.key === 'Home' ? 0 : e.key === 'End' ? 1 : 1 - index
     changeTab(next ? 'incoming' : 'mine')
@@ -671,68 +704,61 @@ export default function BookingsPage() {
 
   return (
     <section className="container page bookings-page">
-      <PageHeading
-        eyebrow="Renting & hosting"
-        title="Bookings"
-        actions={
-          <Link to="/listings" className="btn btn-ghost">
-            Explore rentals
-            <Icon name="arrowRight" size={16} />
-          </Link>
-        }
-      >
-        <p>
-          From the first request to the final handover, keep your rentals in
-          view.
-        </p>
+      <PageHeading title="Bookings">
+        <p>Manage the rentals you request and the items you rent out.</p>
       </PageHeading>
-      <div
-        className="tabs bookings-tabs"
-        role="tablist"
-        aria-label="Booking views"
-      >
-        {[
-          ['mine', 'My requests', 'key'],
-          ['incoming', 'Requests for my listings', 'home'],
-        ].map(([value, label, icon], index) => (
-          <button
-            key={value}
-            ref={(el) => {
-              tabsRef.current[index] = el
-            }}
-            id={`booking-tab-${value}`}
-            type="button"
-            role="tab"
-            aria-selected={tab === value}
-            tabIndex={tab === value ? 0 : -1}
-            aria-controls="booking-panel"
-            onKeyDown={(e) => tabKey(e, index)}
-            onClick={() => changeTab(value)}
+      <div className="bookings-workspace">
+        <div className="bookings-navigation">
+          <div
+            className="bookings-tabs"
+            role="tablist"
+            aria-label="Booking views"
+            aria-orientation={vertical ? 'vertical' : 'horizontal'}
           >
-            <Icon name={icon} size={18} />
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="bookings-simulation">
-        <Icon name="shield" size={20} />
-        <p>
-          <strong>Simulated payments only.</strong> No real money is charged and
-          no card details are collected.
-        </p>
-      </div>
-      <div
-        id="booking-panel"
-        role="tabpanel"
-        aria-labelledby={`booking-tab-${tab}`}
-      >
-        <Panel
-          key={tab}
-          role={tab === 'incoming' ? 'owner' : 'renter'}
-          userId={user.id}
-          status={status}
-          onStatusChange={changeStatus}
-        />
+            {[
+              ['mine', 'My requests', 'key'],
+              ['incoming', 'Requests for my listings', 'home'],
+            ].map(([value, label, icon], index) => (
+              <button
+                key={value}
+                ref={(el) => {
+                  tabsRef.current[index] = el
+                }}
+                id={`booking-tab-${value}`}
+                type="button"
+                role="tab"
+                aria-selected={tab === value}
+                tabIndex={tab === value ? 0 : -1}
+                aria-controls="booking-panel"
+                onKeyDown={(e) => tabKey(e, index)}
+                onClick={() => changeTab(value)}
+              >
+                <Icon name={icon} size={18} />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="bookings-simulation">
+            <Icon name="shield" size={20} />
+            <p>
+              <strong>Simulated payments only.</strong> No real money is
+              charged.
+            </p>
+          </div>
+        </div>
+        <div
+          id="booking-panel"
+          role="tabpanel"
+          aria-labelledby={`booking-tab-${tab}`}
+        >
+          <Panel
+            key={`${user.id}/${tab}`}
+            role={tab === 'incoming' ? 'owner' : 'renter'}
+            userId={user.id}
+            status={status}
+            onStatusChange={changeStatus}
+          />
+        </div>
       </div>
     </section>
   )

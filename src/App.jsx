@@ -1,10 +1,12 @@
 import { Routes, Route } from 'react-router-dom'
 import { lazy, Suspense, useEffect } from 'react'
 import { supabaseConfigurationError } from './lib/supabaseClient.js'
+import Brand from './components/Brand.jsx'
 import PageHeading from './components/PageHeading.jsx'
 import Layout from './components/layout/Layout.jsx'
 import Home from './pages/Home.jsx'
 const AuthPage = lazy(() => import('./pages/AuthPage.jsx'))
+const RecoveryPage = lazy(() => import('./pages/RecoveryPage.jsx'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
 import RequireAuth from './components/RequireAuth.jsx'
 const CreateListing = lazy(() => import('./pages/CreateListing.jsx'))
@@ -36,8 +38,9 @@ export default function App() {
 
   if (supabaseConfigurationError) {
     return (
-      <main id="main" className="container page">
-        <PageHeading eyebrow="eRental" title="Supabase setup required" />
+      <main id="main" className="container page system-page">
+        <Brand />
+        <PageHeading title="Supabase setup required" />
         <p className="form-error" role="alert">
           {supabaseConfigurationError}
         </p>
@@ -121,6 +124,8 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route path="forgot-password" element={<RecoveryPage key="request" mode="request" />} />
+        <Route path="reset-password" element={<RecoveryPage key="reset" mode="reset" />} />
         <Route path="login" element={<AuthPage mode="login" />} />
         <Route
           path="profile"

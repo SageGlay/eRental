@@ -1,26 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import { formatTime } from '../lib/messages.js'
 import EmptyState from '../components/EmptyState.jsx'
 import Icon from '../components/Icon.jsx'
 import LoadError from '../components/LoadError.jsx'
-import PageHeading from '../components/PageHeading.jsx'
 import '../styles/conversation.css'
 
 const META =
   'id, renter_id, listings(id, title), renter:profiles!conversations_renter_id_fkey(display_name), owner:profiles!conversations_owner_id_fkey(display_name)'
 
+const dayLabel = new Intl.DateTimeFormat('en-PH', { dateStyle: 'long' })
+const timeLabel = new Intl.DateTimeFormat('en-PH', { timeStyle: 'short' })
+
 export default function ConversationPage() {
   const { id } = useParams()
+  const { user } = useAuth()
   // React Router reuses the page on a parameter change. Keep drafts, reads,
   // and replies scoped to the conversation shown in the location.
-  return <Conversation key={id} id={id} />
+  return <Conversation key={`${user.id}/${id}`} id={id} user={user} />
 }
 
-function Conversation({ id }) {
-  const { user } = useAuth()
+function Conversation({ id, user }) {
   const [conv, setConv] = useState(undefined) // undefined = loading, null = not found
   const [conversationError, setConversationError] = useState('')
   const [revision, setRevision] = useState(0)
@@ -32,7 +33,8 @@ function Conversation({ id }) {
   const [feedback, setFeedback] = useState('')
   const [needsRefresh, setNeedsRefresh] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
-  const endRef = useRef(null)
+  const listRef = useRef(null)
+  const followLatest = useRef(true)
   const composerRef = useRef(null)
   const headingRef = useRef(null)
   const refreshRef = useRef(null)
@@ -131,7 +133,8 @@ function Conversation({ id }) {
 
   const messageCount = messages?.length
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: 'nearest' })
+    const list = listRef.current
+    if (list && followLatest.current) list.scrollTop = list.scrollHeight
   }, [messageCount])
   useEffect(() => {
     if (conv && revision > 0) headingRef.current?.focus()
@@ -169,6 +172,7 @@ function Conversation({ id }) {
         return setError('We couldn’t send your message. Try again.')
       }
       setBody('')
+      followLatest.current = true
       setFeedback('Message sent.')
       // A read that began before the insert cannot confirm the new message.
       readingRef.current?.abort()
@@ -272,7 +276,7 @@ function Conversation({ id }) {
     conv.renter_id === user.id
       ? conv.owner?.display_name
       : conv.renter?.display_name
-  const name = other ?? 'Marketplace member'
+  const name = other?.trim() || 'Marketplace member'
   const initials = name
     .split(/\s+/)
     .slice(0, 2)
@@ -287,172 +291,170 @@ function Conversation({ id }) {
             <Icon name="arrowLeft" size={18} />
             Messages
           </Link>
-          <span aria-hidden="true">/</span>
-          <span>{name}</span>
         </nav>
-        <PageHeading
-          eyebrow="Your conversation"
-          title={name}
-          titleRef={headingRef}
-          actions={
+        <div className="conversation-thread">
+          <header className="conversation-heading">
+            <span className="conversation-avatar" aria-hidden="true">
+              {initials}
+            </span>
+            <div className="conversation-person">
+              <h1 ref={headingRef} tabIndex={-1}>
+                {name}
+              </h1>
+              <p>{conv.renter_id === user.id ? 'Listing owner' : 'Renter'}</p>
+            </div>
             <button
               type="button"
-              className="btn btn-ghost"
+              className="btn"
               ref={refreshRef}
               disabled={refreshing}
               aria-busy={refreshing}
               onClick={refreshMessages}
             >
-              <Icon name="message" size={18} />
-              {refreshing ? 'Refreshing messages…' : 'Refresh messages'}
+              <Icon name="refresh" size={18} />
+              <span>{refreshing ? 'Refreshing messages…' : 'Refresh messages'}</span>
             </button>
-          }
-        >
-          <p>A direct conversation about your rental.</p>
-        </PageHeading>
-        <div className="conversation-layout">
-          <div className="thread conversation-thread">
-            <header className="conversation-thread__header">
-              <span className="conversation-avatar" aria-hidden="true">
-                {initials}
-              </span>
-              <div>
-                <strong>{name}</strong>
-                <span>Messages refresh regularly</span>
-              </div>
-              <Icon name="message" size={22} />
-            </header>
-            {messagesError && (
-              <LoadError onRetry={refreshMessages} retrying={refreshing}>
-                {messagesError}
-              </LoadError>
-            )}
-            <ul
-              className="thread__list conversation-messages"
-              aria-label="Conversation messages"
-              aria-live="polite"
-              aria-relevant="additions text"
-            >
-              {messages === null && !messagesError && (
-                <li role="status" className="conversation-empty">
-                  Loading messages…
-                </li>
-              )}
-              {messages?.length === 0 && !messagesError && (
-                <li className="conversation-empty">
-                  <Icon name="message" size={36} />
-                  <h2>Start with a hello</h2>
-                  <p>
-                    Ask about the rental, discuss your dates, or arrange the
-                    handover.
-                  </p>
-                </li>
-              )}
-              {messages?.map((m) => (
-                <li
-                  key={m.id}
-                  className={`bubble conversation-bubble${m.sender_id === user.id ? ' bubble--mine' : ''}`}
-                >
-                  <span className="sr-only">
-                    {m.sender_id === user.id ? 'You' : name}:
-                  </span>
-                  <p>{m.body}</p>
-                  <div className="conversation-bubble__meta">
-                    <time dateTime={m.created_at}>
-                      {formatTime(m.created_at)}
-                    </time>
-                    {m.sender_id === user.id && (
-                      <span>
-                        {m.read_at ? (
-                          <>
-                            <Icon name="check" size={12} />
-                            Read
-                          </>
-                        ) : (
-                          'Sent'
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-              <li ref={endRef} aria-hidden="true" />
-            </ul>
-            <form
-              className="thread__form conversation-composer"
-              onSubmit={handleSend}
-              noValidate
-              aria-busy={busy}
-            >
-              <label htmlFor="body">Your message</label>
-              <textarea
-                ref={composerRef}
-                id="body"
-                className="resize-none"
-                rows={3}
-                maxLength={2000}
-                placeholder="Write a message…"
-                value={body}
-                disabled={busy || needsRefresh}
-                aria-describedby={`message-help${error ? ' message-error' : ''}`}
-                onChange={(e) => {
-                  setBody(e.target.value)
-                  setFeedback('')
-                }}
-              />
-              {error && (
-                <div className="conversation-error">
-                  <p id="message-error" className="form-error" role="alert">
-                    {error}
-                  </p>
-                </div>
-              )}
-              <div className="conversation-composer__footer">
-                <span id="message-help" className="field__hint">
-                  Up to 2,000 characters
-                </span>
-                <span className="sr-only" role="status">
-                  {feedback}
-                </span>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={busy || needsRefresh || !messages || !body.trim()}
-                >
-                  <Icon name="arrowRight" size={18} />
-                  {busy ? 'Sending…' : 'Send'}
-                </button>
-              </div>
-            </form>
-          </div>
+          </header>
           <aside className="conversation-context" aria-label="Rental context">
-            <div className="conversation-context__icon">
-              <Icon name="box" size={28} />
+            <Icon name="box" size={20} />
+            <div>
+              <span>Rental listing</span>
+              <strong>{conv.listings?.title || 'Listing unavailable'}</strong>
             </div>
-            <p className="eyebrow">You’re discussing</p>
-            <h2>{conv.listings?.title ?? 'A rental listing'}</h2>
-            {conv.listings && (
-              <Link
-                className="btn btn-ghost"
-                to={`/listings/${conv.listings.id}`}
-              >
-                View listing
-                <Icon name="arrowRight" size={16} />
+            {conv.listings?.id && (
+              <Link to={`/listings/${conv.listings.id}`}>
+                View listing <Icon name="arrowRight" size={16} />
               </Link>
             )}
-            <div className="conversation-guidance">
-              <Icon name="shield" size={20} />
-              <p>
-                Confirm the rental details and arrange pickup or access directly
-                with the other person.
-              </p>
-            </div>
-            <p className="field__hint">
-              Keep arrangements respectful. Never share passwords or send real
-              money outside agreed rental terms.
-            </p>
           </aside>
+          {messagesError && (
+            <LoadError onRetry={refreshMessages} retrying={refreshing}>
+              {messagesError}
+            </LoadError>
+          )}
+          <ul
+            ref={listRef}
+            className="conversation-messages"
+            tabIndex={0}
+            onScroll={(event) => {
+              const list = event.currentTarget
+              followLatest.current =
+                list.scrollHeight - list.clientHeight - list.scrollTop < 32
+            }}
+            aria-label="Conversation messages"
+            aria-live="polite"
+            aria-relevant="additions text"
+          >
+            {messages === null && !messagesError && (
+              <li role="status" className="conversation-empty">
+                Loading messages…
+              </li>
+            )}
+            {messages?.length === 0 && !messagesError && (
+              <li className="conversation-empty">
+                <Icon name="message" size={36} />
+                <h2>Start with a hello</h2>
+                <p>
+                  Ask about the rental, discuss your dates, or arrange the
+                  handover.
+                </p>
+              </li>
+            )}
+            {messages?.map((m, index) => {
+              const timestamp = new Date(m.created_at)
+              const day = dayLabel.format(timestamp)
+              const startsDay =
+                index === 0 ||
+                day !==
+                  dayLabel.format(new Date(messages[index - 1].created_at))
+              const mine = m.sender_id === user.id
+              return (
+                <Fragment key={m.id}>
+                  {startsDay && (
+                    <li className="conversation-date">
+                      <time dateTime={m.created_at}>{day}</time>
+                    </li>
+                  )}
+                  <li
+                    className={`conversation-bubble${mine ? ' bubble--mine' : ''}`}
+                  >
+                    <span className="sr-only">{mine ? 'You' : name}:</span>
+                    <p>{m.body}</p>
+                    <div className="conversation-bubble__meta">
+                      <time dateTime={m.created_at}>
+                        {timeLabel.format(timestamp)}
+                      </time>
+                      {mine && (
+                        <span>
+                          {m.read_at ? (
+                            <>
+                              <Icon name="check" size={12} />
+                              Read
+                            </>
+                          ) : (
+                            'Sent'
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                </Fragment>
+              )
+            })}
+          </ul>
+          <form
+            className="conversation-composer"
+            onSubmit={handleSend}
+            noValidate
+            aria-busy={busy}
+          >
+            <label htmlFor="body">Your message</label>
+            <textarea
+              ref={composerRef}
+              id="body"
+              className="resize-none"
+              rows={2}
+              maxLength={2000}
+              placeholder="Write a message…"
+              value={body}
+              disabled={busy || needsRefresh}
+              aria-describedby={`message-help${error ? ' message-error' : ''}`}
+              onChange={(e) => {
+                setBody(e.target.value)
+                setFeedback('')
+              }}
+            />
+            {error && (
+              <div className="conversation-error">
+                <p id="message-error" className="form-error" role="alert">
+                  {error}
+                </p>
+              </div>
+            )}
+            <div className="conversation-composer__footer">
+              <span id="message-help" className="field__hint">
+                {body
+                  ? `${body.length.toLocaleString('en-PH')} / 2,000`
+                  : 'Up to 2,000 characters'}
+              </span>
+              <span className="conversation-feedback" role="status">
+                {feedback}
+              </span>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={busy || needsRefresh || !messages || !body.trim()}
+              >
+                <Icon name="arrowRight" size={18} />
+                {busy ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          </form>
         </div>
+        <p className="conversation-sync">
+          <Icon name="clock" size={16} />
+          Checks for new messages every 8 seconds.
+        </p>
       </div>
     </section>
   )
