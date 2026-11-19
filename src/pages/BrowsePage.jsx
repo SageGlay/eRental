@@ -6,6 +6,7 @@ import { useCategories } from '../hooks/useCategories.js'
 import { useSearchListings } from '../hooks/useSearchListings.js'
 import LoadError from '../components/LoadError.jsx'
 import Icon from '../components/Icon.jsx'
+import { formatPrice } from '../lib/format.js'
 import PageHeading from '../components/PageHeading.jsx'
 import ListingSkeleton from '../components/ListingSkeleton.jsx'
 import '../styles/discovery.css'
@@ -48,7 +49,7 @@ function FilterForm({ initial, categories, onApply, onClear }) {
 
   return (
     <form className="filters browse-filters" role="search" noValidate onSubmit={handleSubmit} ref={formRef}>
-      <div className="browse-filters__heading"><Icon name="sliders" /><h2>Find your fit</h2></div>
+      <div className="browse-filters__heading"><Icon name="sliders" /><h2>Filters &amp; sort</h2></div>
       <div className="field browse-filters__query">
         <label htmlFor="q">Search</label>
         <div className="browse-query-control">
@@ -108,6 +109,9 @@ export default function BrowsePage() {
   const [params, setParams] = useSearchParams()
   const { categories, loading: catsLoading, error: catsError, retry: retryCategories } = useCategories()
 
+  const resultsHeading = useRef(null)
+  const chipList = useRef(null)
+
   const get = (key) => params.get(key) ?? ''
   const slug = get('category')
   const category = categories.find((c) => c.slug === slug)
@@ -116,6 +120,26 @@ export default function BrowsePage() {
   const filters = { q: initial.q, categoryId: slug ? (category?.id ?? -1) : null, location: initial.location, min: initial.min, max: initial.max, per: initial.per, sort: initial.sort }
   const waitingForCategory = Boolean(slug && (catsLoading || catsError))
   const { items, total, hasMore, loading, loadingMore, error, moreError, loadMore, retry } = useSearchListings(filters, !waitingForCategory)
+
+  const chips = [
+    ['q', initial.q && 'Search · ' + initial.q],
+    ['category', slug && (category?.name || slug)],
+    ['location', initial.location && 'Area · ' + initial.location],
+    ['min', initial.min && 'From ' + formatPrice(initial.min)],
+    ['max', initial.max && 'Up to ' + formatPrice(initial.max)],
+    ['per', initial.per && 'Per ' + initial.per],
+  ].filter(([, label]) => label)
+
+  function removeFilter(key, position) {
+    const next = new URLSearchParams(params)
+    next.delete(key)
+    setParams(next)
+    requestAnimationFrame(() => {
+      const remaining = chipList.current?.querySelectorAll('button')
+      const target = remaining?.[position] || remaining?.[position - 1] || resultsHeading.current
+      target?.focus()
+    })
+  }
 
   function apply(f) {
     const next = {}
@@ -132,17 +156,25 @@ export default function BrowsePage() {
 
   return (
     <section className="container page browse-page">
-      <PageHeading eyebrow="Discover Iligan" title="Browse rentals"><p>For the everyday, the special day, and everything in between.</p></PageHeading>
+      <PageHeading title="Browse rentals" actions={<span className="browse-place"><Icon name="mapPin" size={17} />Iligan City, Philippines</span>} />
       <div className="browse-layout">
         <aside className="browse-sidebar" aria-label="Rental filters">
           <FilterForm key={params.toString()} initial={initial} categories={categories} onApply={apply} onClear={clearFilters} />
-          <p className="browse-sidebar__hint"><Icon name="mapPin" size={17} />Find individual owners and rental businesses around Iligan City.</p>
         </aside>
         <div className="browse-results">
           <header className="browse-results__heading">
-            <h2>{category?.name || 'A little more possibility'}</h2>
+            <h2 ref={resultsHeading} tabIndex={-1}>{category?.name || (chips.length ? 'Search results' : 'All rentals')}</h2>
             <p className="results__count" aria-live="polite">{waitingForCategory ? catsLoading ? 'Loading categories…' : '' : loading ? 'Searching…' : error ? '' : `${total} listing${total === 1 ? '' : 's'} found`}</p>
           </header>
+          {chips.length > 0 && (
+            <ul className="browse-chips" ref={chipList} aria-label="Active filters">
+              {chips.map(([key, label], index) => (
+                <li key={key}><button type="button" onClick={() => removeFilter(key, index)} aria-label={'Remove ' + label}>
+                  {label}<Icon name="x" size={15} />
+                </button></li>
+              ))}
+            </ul>
+          )}
           {catsError && <LoadError onRetry={retryCategories}>{catsError}</LoadError>}
           {error && <LoadError onRetry={retry}>We couldn’t load listings. {error}</LoadError>}
           {searching && <ListingSkeleton count={6} />}

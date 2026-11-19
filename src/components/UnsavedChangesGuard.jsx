@@ -1,11 +1,27 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import Dialog from './Dialog.jsx'
 
-// Anchored in-app navigation + actual page unload. BrowserRouter cannot block history traversal.
+// Handle linked departures, browser history traversal and document unload.
 export default function UnsavedChangesGuard({ dirty }) {
   const [destination, setDestination] = useState(null)
   const navigate = useNavigate()
+  const history = useBlocker(({ historyAction, currentLocation, nextLocation }) =>
+    dirty && historyAction === 'POP' &&
+    (currentLocation.pathname !== nextLocation.pathname || currentLocation.search !== nextLocation.search),
+  )
+  const cancel = () => {
+    setDestination(null)
+    if (history.state === 'blocked') history.reset()
+  }
+  const leave = () => {
+    if (history.state === 'blocked') {
+      history.proceed()
+    } else if (destination) {
+      navigate(destination)
+      setDestination(null)
+    }
+  }
   useEffect(() => {
     if (!dirty) return
     const unload = (event) => {
@@ -46,26 +62,22 @@ export default function UnsavedChangesGuard({ dirty }) {
       document.removeEventListener('click', link, true)
     }
   }, [dirty])
-  if (!destination || !dirty) return null
+  if (!dirty || (!destination && history.state !== 'blocked')) return null
   return (
-    <Dialog title="Leave without saving?" onClose={() => setDestination(null)}>
+    <Dialog title="Leave without saving?" onClose={cancel}>
       <p>
         Your unsaved changes will be lost. Stay here to finish saving your work.
       </p>
       <div className="verification-actions">
         <button
           className="btn btn-primary"
-          onClick={() => setDestination(null)}
+          onClick={cancel}
         >
           Keep editing
         </button>
         <button
           className="btn btn-ghost"
-          onClick={() => {
-            const next = destination
-            setDestination(null)
-            navigate(next)
-          }}
+          onClick={leave}
         >
           Leave page
         </button>

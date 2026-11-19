@@ -1,6 +1,6 @@
 # eRental interaction contract
 
-This records shared marketplace interactions, including the protected account verification workflow and the approved 2.0 presentation changes below. Visual ownership is in [DESIGN.md](DESIGN.md); runtime values remain in `src/styles/tokens.css`.
+This records shared marketplace interactions, including protected account verification and the 3.0 presentation contract. Visual ownership is in [DESIGN.md](DESIGN.md); runtime values remain in `src/styles/tokens.css`.
 
 ## Business evidence
 
@@ -53,16 +53,19 @@ Identity documents are fetched with the authenticated SDK only on explicit reque
 
 Native dialogs provide inert background, focus trapping and Escape. Focus stays inside confirmations and moves to a stable queue heading after completed reviews; it returns to the opener when canceling a review. Errors use role=alert, success uses role=status, and invalid file selection regains focus after the form is enabled. Modern Chromium/keyboard/narrow viewports are exercised; full assistive-technology/platform conformance is not inferred from static checks.
 
-## eRental 2.0 presentation and navigation contract
+## eRental 3.0 presentation and navigation contract
 
-The approved November 18 redesign brief changes visual identity throughout the existing app; earlier references to preserving teal/light-only navigation are superseded. Business/API/security evidence above remains authoritative. No Supabase schema, grants, RLS, Storage rules or RPC definitions change in this redesign.
+The handover-tag identity, responsive navigation and role-specific workspaces share the existing Supabase authorization model. Email recovery uses Supabase Auth without a database migration.
 
 - `ThemeProvider` / `ThemeControl` own light, dark and system preferences. Only the theme preference is stored under `erental-theme`; an early HTML script applies the resolved mode before startup. System media changes and other-tab preferences update the active mode. Native select popup geometry is accepted for theme/filter/account controls; native date popup remains accepted for booking dates.
 - `Brand` and `Icon` own shared identity and iconography; `PageHeading`, `.btn`, `.field`, `LoadError`, `EmptyState` and `ListingSkeleton` own shared presentation. Runtime semantic tokens in `tokens.css` supply both themes, including private dialogs and alerts.
-- Desktop account navigation uses native details/summary, not ARIA menu semantics. Escape/outside interaction closes it; route changes close disclosures. Mobile navigation uses a separately composed disclosure with a clear toggle, expanded state and Escape focus recovery. Admin routes and navigation retain the existing authoritative role checks.
-- Browse commits existing filters on Search, keeps existing URL keys and Load more/stale-response behavior. Mobile filter disclosure keeps keyword/search immediately available. Search clears act immediately and restore input focus. IME composition cannot accidentally submit the homepage search.
-- Create/edit/profile retain existing mutation destinations, values on failure and retry identities. `UnsavedChangesGuard` owns app-linked navigation confirmation and actual unload warnings. BrowserRouter does not safely block browser Back/Forward history traversal; this known limitation is reported rather than simulating history ownership. No sensitive verification documents/drafts are stored persistently.
+- The desktop bar exposes search and account tasks. Its native account disclosure supports Escape and outside close. A mobile dock exposes frequent destinations, with a separate labeled menu for account, owner and authorized admin links. The menu closes on navigation and restores focus on Escape. Search opens the browse keyword field. An offline status appears when the browser reports lost connectivity.
+- Browse commits filters to existing URL keys and retains load-more/stale-response protection. Each applied filter can be removed independently. Mobile filters use a disclosure, keyword entry remains available and clear actions restore focus. IME composition cannot submit the homepage search early.
+- The listing editor groups inputs and displays a draft review, including a cover and rate. Create/edit/profile retain mutation destinations, values on failure and retry identities. Dirty forms intercept app-linked exits, router Back/Forward departures and actual document unload. Same-page section links remain available. Drafts and private submission documents stay in memory.
+- Protected entries can return a guest to the requested task after login through a validated local destination. Recovery uses a fixed same-origin callback and an in-memory Supabase Auth client isolated from the ordinary account session. A missing or invalid recovery link offers a new link request. An ordinary signed-in session alone cannot enable the reset form.
 - Bookings preserve renter/owner transitions, price computation and simulated-payment RPC. Confirmation names significant actions. Payments remain explicitly simulated. Reviews and reports preserve existing payloads and eligibility.
 - Inbox/conversations retain their existing periodic refresh model and read-marker semantics. Refresh controls do not claim realtime delivery. No new chat backend or delivery guarantees are introduced.
 - Removed owner listings retain the existing visibility behavior; the interface does not invent a removed-history API. Non-sensitive page status filters may use URL parameters; actual data and permission checks remain server-owned.
 - Canonical CRUD evidence remains the existing reliability/core/verification tests; `tests/e2e/redesign.spec.js` adds theme, responsive and shared-control checks. Browser fixture tests never establish live RLS or production readiness.
+
+- Inbox filters and thread search operate on the signed-in user's loaded conversations. Booking dates from PostgreSQL DATE remain calendar dates across time zones. An uncertain moderation decision requires a fresh queue read before another decision. Reports and verification confirmations identify the subject.

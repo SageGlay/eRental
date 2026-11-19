@@ -1,6 +1,5 @@
 import { expect } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   test,
@@ -183,14 +182,19 @@ async function expectNoPageOverflow(page, name) {
 }
 
 async function capture(page, testInfo, name) {
-  const external =
-    process.env.ERENTAL_SCREENSHOT_DIR ||
-    (existsSync('/workspace/reports/erental-redesign')
-      ? '/workspace/reports/erental-redesign/screenshots'
-      : null)
-  const directory = external || testInfo.outputPath('screenshots')
+  const directory = process.env.ERENTAL_SCREENSHOT_DIR || testInfo.outputPath('screenshots')
   await mkdir(directory, { recursive: true })
-  await page.evaluate(() => document.fonts.ready)
+  await page.evaluate(async () => {
+    await document.fonts.ready
+    const visibleImages = [...document.images].filter((image) => {
+      const bounds = image.getBoundingClientRect()
+      return bounds.width && bounds.height && bounds.top < window.innerHeight
+    })
+    await Promise.allSettled(visibleImages.map((image) => image.decode()))
+  })
+  if (process.env.ERENTAL_SCREENSHOT_DIR) {
+    await page.screenshot({ path: join(directory, `${name}-viewport.png`), animations: 'disabled' })
+  }
   await page.screenshot({
     path: join(directory, `${name}.png`),
     fullPage: true,
@@ -199,7 +203,7 @@ async function capture(page, testInfo, name) {
 }
 
 const routes = [
-  ['home', '/', /Rent almost anything/],
+  ['home', '/', 'Rent it in Iligan.'],
   ['browse', '/listings', 'Browse rentals'],
   ['detail', `/listings/${LISTING_ID}`, 'Camera for rent'],
   ['create', '/list', 'List an item'],
@@ -210,11 +214,26 @@ const routes = [
   ['inbox', '/messages', 'Messages'],
   ['conversation', `/messages/${CONVERSATION_ID}`, 'Sample owner'],
   ['verification', '/verification', 'Account verification'],
-  ['admin-reports', '/admin', 'Admin'],
+  ['admin-reports', '/admin', 'Listing reports'],
   ['admin-verification', '/admin/verification', 'Verification requests'],
+  ['not-found', '/missing-rental-route', 'Page not found'],
 ]
 
 for (const theme of THEMES) {
+  for (const width of [390, 1440]) {
+    test(`${theme} denied administration offers a visible exit at ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 })
+      await setTheme(page, theme)
+      const { model } = await mockRedesign(page, { admin: false })
+      await page.goto('/admin')
+      await expect(page.getByRole('heading', { level: 1, name: 'Admins only' })).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'My profile' })).toBeVisible()
+      expect(model.calls.some((call) => call.path === '/rest/v1/listing_reports')).toBe(false)
+      await expectNoPageOverflow(page, `${theme}/${width}/admin-denied`)
+      await capture(page, testInfo, `${theme}-${width}-admin-denied`)
+    })
+  }
+
   for (const width of WIDTHS) {
     test(`${theme} marketplace and account routes fit a ${width}px viewport`, async ({
       page,
@@ -246,6 +265,13 @@ for (const theme of THEMES) {
             'desktop search fields appear side by side',
           ).toBeGreaterThan(keyword.x + keyword.width)
         }
+        if (name === 'conversation' && width === 390) {
+          const send = await page.getByRole('main').getByRole('button', { name: 'Send', exact: true }).boundingBox()
+          const dock = await page.getByRole('navigation', { name: 'Quick navigation' }).boundingBox()
+          expect(send, 'short conversation has a visible Send action').not.toBeNull()
+          expect(dock, 'mobile dock is visible').not.toBeNull()
+          expect(send.y + send.height, 'Send is above the fixed navigation').toBeLessThanOrEqual(dock.y)
+        }
         if (name === 'browse' && width < 900) {
           await page.getByRole('button', { name: /Filters & sort/ }).click()
           await expect(
@@ -257,18 +283,15 @@ for (const theme of THEMES) {
           await expectNoPageOverflow(page, `${theme}/${width}/expanded-filters`)
           await page.getByRole('button', { name: /Filters & sort/ }).click()
         }
-        const keyPage =
-          ['home', 'browse', 'detail'].includes(name) &&
-          [390, 1440].includes(width)
-        if (keyPage || (name === 'admin-verification' && width === 390)) {
+        if ([390, 1440].includes(width)) {
           await capture(page, testInfo, `${theme}-${width}-${name}`)
         }
       }
     })
 
-    test(`${theme} login and registration fit a ${width}px viewport`, async ({
+    test(`${theme} authentication screens fit a ${width}px viewport`, async ({
       page,
-    }) => {
+    }, testInfo) => {
       await page.setViewportSize({ width, height: 900 })
       await setTheme(page, theme)
       await mockRedesign(page, { signedIn: false, admin: false })
@@ -287,7 +310,22 @@ for (const theme of THEMES) {
           page.getByRole('button', { name: 'Show password' }),
         ).toBeVisible()
         await expectNoPageOverflow(page, `${theme}/${width}/${path}`)
+        if ([390, 1440].includes(width)) {
+          await capture(page, testInfo, `${theme}-${width}-${path.slice(1)}`)
+        }
       }
+
+      await page.goto('/forgot-password')
+      await expect(page.getByRole('heading', { level: 1, name: 'Reset password' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Send recovery link' })).toBeVisible()
+      await expectNoPageOverflow(page, `${theme}/${width}/forgot-password`)
+      if ([390, 1440].includes(width)) await capture(page, testInfo, `${theme}-${width}-forgot-password`)
+
+      await page.goto('/reset-password')
+      await expect(page.getByRole('heading', { level: 1, name: 'Choose a new password' })).toBeVisible()
+      await expect(page.getByRole('alert')).toContainText('missing, invalid or expired')
+      await expectNoPageOverflow(page, `${theme}/${width}/reset-password`)
+      if ([390, 1440].includes(width)) await capture(page, testInfo, `${theme}-${width}-reset-password`)
     })
   }
 }
@@ -512,7 +550,8 @@ for (const theme of THEMES) {
         ['card text', '--text', '--surface-elevated'],
         ['secondary card labels', '--muted', '--surface-elevated'],
         ['field text', '--text', '--input-bg'],
-        ['primary action', '--on-primary', '--primary'],
+        ['primary surface', '--on-primary', '--primary'],
+        ['primary action', '--on-action', '--action'],
         ['success', '--success-text', '--success-bg'],
         ['warning', '--warning-text', '--warning-bg'],
         ['error', '--danger-text', '--danger-bg'],

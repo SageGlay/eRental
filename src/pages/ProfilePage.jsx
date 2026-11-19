@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import LoadError from '../components/LoadError.jsx'
 import VerifiedBadge from '../components/VerifiedBadge.jsx'
+import ThemeControl from '../components/ThemeControl.jsx'
 import PageHeading from '../components/PageHeading.jsx'
 import Icon from '../components/Icon.jsx'
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx'
@@ -71,7 +72,7 @@ function ProfileForm({ user, profile, onSaved }) {
         .single()
       if (err || !data)
         return setError(
-          'We couldn’t save your profile. Try again; your changes are still here.',
+          'We couldn’t save your profile. Try again. Your changes are still here.',
         )
       setDisplayName(name)
       setBusinessName(accountType === 'business' ? business : '')
@@ -84,7 +85,7 @@ function ProfileForm({ user, profile, onSaved }) {
       onSaved()
     } catch {
       setError(
-        'We couldn’t confirm your profile was saved. Try again; your changes are still here.',
+        'We couldn’t confirm your profile was saved. Try again. Your changes are still here.',
       )
     } finally {
       submitting.current = false
@@ -103,8 +104,8 @@ function ProfileForm({ user, profile, onSaved }) {
       <div className="profile-section-heading">
         <Icon name="user" />
         <div>
-          <h2>Your public identity</h2>
-          <p>Help renters and owners recognize you.</p>
+          <h2>Public profile</h2>
+          <p>Choose how your name appears on listings and rental requests.</p>
         </div>
       </div>
       <fieldset className="form-controls" disabled={busy}>
@@ -125,8 +126,7 @@ function ProfileForm({ user, profile, onSaved }) {
             }}
           />
           <span className="field__hint" id="displayName-hint">
-            Shown to other users on your listings and requests. Your email is
-            never shown publicly.
+            Use a name renters and owners will recognize.
           </span>
         </div>
         <fieldset className="field--choices profile-account-choices">
@@ -167,9 +167,6 @@ function ProfileForm({ user, profile, onSaved }) {
               </span>
             </label>
           </div>
-          <p className="field__hint">
-            Either type can both rent items and list items.
-          </p>
         </fieldset>
         {accountType === 'business' && (
           <div className="field">
@@ -211,9 +208,6 @@ function ProfileForm({ user, profile, onSaved }) {
         </p>
       )}
       <div className="profile-save">
-        <p className="field__hint">
-          Your account works for renting and listing.
-        </p>
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? 'Saving…' : 'Save changes'}
         </button>
@@ -228,85 +222,81 @@ export default function ProfilePage() {
   const authoritativeProfile = !profileLoading && !profileError ? profile : null
   return (
     <section className="container page profile-page">
-      <PageHeading eyebrow="Your marketplace" title="My profile">
-        <p>One account for the things you need and the things you share.</p>
-      </PageHeading>
+      <PageHeading title="My profile" />
       <div className="profile-layout">
         <aside className="profile-sidebar" aria-label="Account overview">
           <div className="profile-identity">
-            <div className="profile-avatar" aria-hidden="true">
+            <span className="profile-avatar" aria-hidden="true">
               {profile?.display_name?.trim().slice(0, 1).toUpperCase() || (
-                <Icon name="user" size={32} />
+                <Icon name="user" size={28} />
               )}
-            </div>
-            <h2>{profile?.display_name || 'Your account'}</h2>
-            <p className="profile-email">{user.email}</p>
-            {authoritativeProfile && (
-              <p className="profile-kind">
-                <Icon
-                  name={
-                    authoritativeProfile.account_type === 'business'
-                      ? 'building'
-                      : 'user'
-                  }
-                  size={16}
-                />
-                {authoritativeProfile.account_type === 'business'
-                  ? 'Rental business'
-                  : 'Individual account'}
-              </p>
-            )}
-            <VerifiedBadge profile={authoritativeProfile} />
-          </div>
-          <div className="profile-trust">
-            <span className="profile-trust-icon">
-              <Icon name="shield" size={24} />
             </span>
-            <h2>Account verification</h2>
-            <p>
-              Submit identity or business documents for review, or check the
-              progress of an existing request.
-            </p>
-            <Link to="/verification" className="btn btn-ghost">
-              Account verification
-              <Icon name="arrowRight" size={18} />
-            </Link>
+            <div>
+              <h2>{profile?.display_name || 'Your account'}</h2>
+              {authoritativeProfile && (
+                <p className="profile-kind">
+                  {authoritativeProfile.account_type === 'business'
+                    ? 'Rental business'
+                    : 'Individual account'}
+                </p>
+              )}
+              <VerifiedBadge profile={authoritativeProfile} />
+            </div>
           </div>
-          <nav className="profile-shortcuts" aria-label="Your rental activity">
-            <Link to="/my-listings">
-              <Icon name="grid" />
-              My listings
-              <Icon name="chevronRight" size={16} />
+          <nav className="profile-index" aria-label="Profile sections">
+            <a href="#public-profile">
+              <Icon name="user" size={18} /> Public profile
+            </a>
+            <Link to="/verification">
+              <Icon name="shield" size={18} /> Account verification
             </Link>
-            <Link to="/bookings">
-              <Icon name="calendar" />
-              Bookings
-              <Icon name="chevronRight" size={16} />
-            </Link>
-            <Link to="/messages">
-              <Icon name="message" />
-              Messages
-              <Icon name="chevronRight" size={16} />
-            </Link>
+            <a href="#account-settings">
+              <Icon name="sliders" size={18} /> Account settings
+            </a>
           </nav>
         </aside>
         <div className="profile-editor">
-          {profileError && (
-            <LoadError onRetry={refreshProfile}>{profileError}</LoadError>
-          )}
-          {profile ? (
-            <ProfileForm
-              key={user.id}
-              user={user}
-              profile={profile}
-              onSaved={refreshProfile}
-            />
-          ) : profileLoading ? (
-            <div className="profile-loading" role="status" aria-busy="true">
-              <span className="skeleton skeleton--line" aria-hidden="true" />
-              <p>Loading your profile…</p>
+          <section id="public-profile" aria-label="Edit public profile">
+            {profileError && (
+              <LoadError onRetry={refreshProfile}>{profileError}</LoadError>
+            )}
+            {profile ? (
+              <ProfileForm
+                key={user.id}
+                user={user}
+                profile={profile}
+                onSaved={refreshProfile}
+              />
+            ) : profileLoading ? (
+              <div className="profile-loading" role="status" aria-busy="true">
+                <span className="skeleton skeleton--line" aria-hidden="true" />
+                <p>Loading your profile…</p>
+              </div>
+            ) : null}
+          </section>
+          <section
+            id="account-settings"
+            className="profile-settings"
+            aria-labelledby="settings-heading"
+          >
+            <h2 id="settings-heading">Account settings</h2>
+            <div className="profile-settings__row">
+              <div>
+                <h3>Sign-in email</h3>
+                <p>{user.email}</p>
+              </div>
+              <Link to="/forgot-password" className="btn btn-small">
+                Reset password
+              </Link>
             </div>
-          ) : null}
+            <div className="profile-settings__row">
+              <div>
+                <h3>Appearance</h3>
+                <p>Choose a color theme for this browser.</p>
+              </div>
+              <ThemeControl />
+            </div>
+          </section>
         </div>
       </div>
     </section>

@@ -1,10 +1,10 @@
-# eRental 2.0
+# eRental 3.0
 
-A React marketplace prototype for renting and listing items and properties in Iligan City. One account can rent and own listings. Supabase provides authentication, Postgres/RLS and photo storage; payments are simulated.
+Rent gear, vehicles and spaces around Iligan City with one renter and owner account. The React/Vite app uses Supabase Auth, PostgreSQL and Storage. Payments are simulated.
 
-Detailed guides: [Local setup and testing](LOCAL_SETUP_AND_TESTING.md), [verification contract export and acceptance tests](VERIFICATION_TESTING.md), [verification milestone history](MILESTONE_STATUS.md), the [2.0 redesign handoff](REDESIGN.md), and the [Milestone 3 integration and security handoff](MILESTONE_3_HANDOFF.md).
+The new marketplace includes photo-led discovery, shareable filters, a listing editor with draft review, owner inventory, booking estimates, a searchable inbox, email password recovery, private verification and admin review. Theme preference follows the system or a saved light/dark override. Bricolage Grotesque and DM Sans ship with the app.
 
-The redesigned interface includes Light, Dark and System themes, self-hosted Manrope/DM Sans typography, an original SVG brand and responsive renter/owner/admin workflows. [DESIGN.md](DESIGN.md) records visual intent; [UX-CONTRACT.md](UX-CONTRACT.md) records behavioral ownership.
+[3.0 handoff and screenshots](ERENTAL_3_HANDOFF.md) · [Design system](DESIGN.md) · [UX strategy](ERENTAL_3_UX_STRATEGY.md) · [Interaction contract](UX-CONTRACT.md) · [Local setup and testing](LOCAL_SETUP_AND_TESTING.md)
 
 ## Develop
 
@@ -24,7 +24,7 @@ npm run build
 npm run preview
 ```
 
-Production hosting must serve `index.html` for SPA deep links.
+Production hosting must serve `index.html` for SPA deep links, including `/reset-password`. Add the exact deployed origin plus `/reset-password` to the allowed redirect URLs in Supabase Authentication → URL Configuration. The recovery flow uses the standard Supabase recovery email confirmation link. Confirm delivery and callback handling using a dedicated staging account before enabling the workflow for users.
 
 ## Regression checks
 
@@ -40,7 +40,7 @@ These tests validate frontend behavior against controlled API responses. They do
 
 ## Current implementation
 
-- Email/password accounts, editable individual/business profiles and administrator route checks.
+- Email/password accounts with email recovery, editable individual/business profiles and administrator route checks.
 - Create/edit listings with category details, prices/deposits/terms, up to ten photographs, availability status and soft removal.
 - Keyword/category/text-location/price search and sorting.
 - Rental requests, owner decisions, booking schedule/history, simulated payments and reviews.
@@ -55,4 +55,4 @@ The checked-in migration records the foundation tables, privileges/RLS, category
 
 Live verification also requires network access to the configured project hostname and appropriate test users. Preserve database enforcement: frontend route checks and date checks are usability defenses, not substitutes for RLS, transactional booking constraints or authorized RPCs.
 
-Keep development changes local unless committing or pushing is explicitly authorized.
+[Initial integration handoff](MILESTONE_3_HANDOFF.md) · [Verification contract and acceptance](VERIFICATION_TESTING.md) · [Release readiness](RELEASE_READINESS.md)

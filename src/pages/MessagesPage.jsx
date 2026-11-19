@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { formatTime } from '../lib/messages.js'
@@ -12,36 +12,49 @@ import '../styles/inbox.css'
 const SELECT =
   'id, last_message_at, renter_id, listings(title), renter:profiles!conversations_renter_id_fkey(display_name), owner:profiles!conversations_owner_id_fkey(display_name)'
 
-export default function MessagesPage() {
-  const { user } = useAuth()
+function correspondent(conversation, userId) {
+  const person =
+    conversation.renter_id === userId ? conversation.owner : conversation.renter
+  return person?.display_name?.trim() || 'Marketplace member'
+}
+
+function Inbox({ userId }) {
   const [revision, setRevision] = useState(0)
+  const [params, setParams] = useSearchParams()
+  const [query, setQuery] = useState('')
+  const searchRef = useRef(null)
   const [state, setState] = useState({
     rows: [],
     unread: {},
     loading: true,
     error: null,
   })
+  const unreadOnly = params.get('view') === 'unread'
 
   useEffect(() => {
     let cancelled = false
-    let inFlight = false
+    let active = null
     setState((previous) => ({ ...previous, loading: true, error: null }))
     const load = async () => {
-      if (inFlight) return
-      inFlight = true
+      if (active) return
+      active = new AbortController()
+      const timeout = setTimeout(() => active?.abort(), 15_000)
       try {
         const [convs, unread] = await Promise.all([
           supabase
             .from('conversations')
             .select(SELECT)
-            .order('last_message_at', { ascending: false }),
+            .order('last_message_at', { ascending: false })
+            .abortSignal(active.signal),
           supabase
             .from('messages')
             .select('conversation_id')
             .is('read_at', null)
-            .neq('sender_id', user.id),
+            .neq('sender_id', userId)
+            .abortSignal(active.signal),
         ])
         if (cancelled) return
+        if (convs.error || unread.error) throw convs.error || unread.error
         const counts = {}
         for (const m of unread.data ?? [])
           counts[m.conversation_id] = (counts[m.conversation_id] ?? 0) + 1
@@ -49,189 +62,232 @@ export default function MessagesPage() {
           rows: convs.data ?? [],
           unread: counts,
           loading: false,
-          error: (convs.error ?? unread.error)?.message ?? null,
+          error: null,
         })
-      } catch (error) {
+      } catch {
         if (!cancelled)
           setState((previous) => ({
             ...previous,
             loading: false,
-            error: error.message || 'Check your connection and try again.',
+            error:
+              'We couldn’t load your messages. Check your connection and try again.',
           }))
       } finally {
-        inFlight = false
+        clearTimeout(timeout)
+        active = null
       }
     }
     load()
-    const timer = setInterval(load, 15000)
+    const timer = setInterval(load, 15_000)
     return () => {
       cancelled = true
       clearInterval(timer)
+      active?.abort()
     }
-  }, [user.id, revision])
+  }, [userId, revision])
 
   const { rows, unread, loading, error } = state
   const retry = () => setRevision((value) => value + 1)
+  const normalized = query.trim().toLocaleLowerCase('en-PH')
+  const visible = rows.filter((row) => {
+    if (unreadOnly && !unread[row.id]) return false
+    const name = correspondent(row, userId)
+    return [name, row.listings?.title].some((value) =>
+      value?.toLocaleLowerCase('en-PH').includes(normalized),
+    )
+  })
+  const unreadThreads = rows.filter((row) => unread[row.id]).length
+  function selectView(unreadOnly) {
+    const next = new URLSearchParams(params)
+    if (unreadOnly) next.set('view', 'unread')
+    else next.delete('view')
+    setParams(next)
+  }
+  function clearSearch() {
+    setQuery('')
+    searchRef.current?.focus()
+  }
 
   return (
     <section className="container page inbox-page">
       <PageHeading
-        eyebrow="Your marketplace"
         title="Messages"
         actions={
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn"
             disabled={loading}
             onClick={retry}
           >
-            <Icon name="message" size={18} />
-            Refresh inbox
+            <Icon name="refresh" size={18} />
+            {loading ? 'Refreshing…' : 'Refresh inbox'}
           </button>
         }
-      >
-        <p>
-          Ask questions, confirm the details, and keep your rental plans
-          together.
-        </p>
-      </PageHeading>
-
+      />
       <div className="inbox-layout">
-        <div className="inbox-panel">
-          <div className="inbox-panel__heading">
-            <h2>Your conversations</h2>
-            {!loading && !error && (
-              <span className="inbox-panel__count">
-                {rows.length} conversation{rows.length === 1 ? '' : 's'}
-              </span>
+        <aside className="inbox-mailboxes" aria-label="Conversation filters">
+          <div role="group" aria-label="Mailbox">
+            <button
+              type="button"
+              aria-pressed={!unreadOnly}
+              onClick={() => selectView(false)}
+            >
+              <Icon name="message" size={20} />
+              All conversations
+              {!loading && !error && <span>{rows.length}</span>}
+            </button>
+            <button
+              type="button"
+              aria-pressed={unreadOnly}
+              onClick={() => selectView(true)}
+            >
+              <Icon name="clock" size={20} />
+              Unread
+              {!loading && !error && <span>{unreadThreads}</span>}
+            </button>
+          </div>
+          <Link to="/bookings" className="inbox-bookings">
+            <Icon name="calendar" size={18} />
+            View your bookings
+          </Link>
+        </aside>
+        <section className="inbox-panel" aria-labelledby="inbox-list-title">
+          <div className="inbox-panel__tools">
+            <div>
+              <h2 id="inbox-list-title">
+                {unreadOnly ? 'Unread conversations' : 'Your conversations'}
+              </h2>
+              <p>Checks for new messages every 15 seconds.</p>
+            </div>
+            {rows.length > 0 && (
+              <div className="inbox-search">
+                <label className="sr-only" htmlFor="conversation-search">
+                  Search conversations
+                </label>
+                <Icon name="search" size={18} />
+                <input
+                  id="conversation-search"
+                  ref={searchRef}
+                  type="search"
+                  placeholder="Search names or listings"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    aria-label="Clear conversation search"
+                    onClick={clearSearch}
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
-
           {loading && (
-            <div className="inbox-loading">
-              <p role="status" aria-busy="true">
-                Loading your conversations…
-              </p>
-              <div className="inbox-loading__rows" aria-hidden="true">
-                {[0, 1, 2].map((index) => (
-                  <div className="inbox-loading__row" key={index}>
-                    <span className="skeleton inbox-loading__avatar" />
-                    <span className="skeleton inbox-loading__line" />
-                  </div>
-                ))}
-              </div>
+            <div className="inbox-loading" role="status" aria-busy="true">
+              <span className="sr-only">Loading your conversations…</span>
+              {[0, 1, 2].map((index) => (
+                <div className="skeleton" key={index} aria-hidden="true" />
+              ))}
             </div>
           )}
-          {error && (
-            <div className="inbox-feedback">
-              <LoadError onRetry={retry}>
-                We couldn’t load your messages ({error}).
-              </LoadError>
-            </div>
-          )}
+          {error && <LoadError onRetry={retry}>{error}</LoadError>}
           {!loading && !error && rows.length === 0 && (
-            <div className="inbox-feedback">
-              <EmptyState
-                icon={<Icon name="message" size={32} />}
-                title="No conversations yet"
-                action={
-                  <Link className="btn btn-primary" to="/listings">
-                    Browse rentals
-                    <Icon name="arrowRight" size={18} />
-                  </Link>
-                }
-              >
-                Open a listing and choose “Message the owner” to start a
-                conversation. Owners can reply here once someone writes to them.
-              </EmptyState>
-            </div>
+            <EmptyState
+              icon={<Icon name="message" size={32} />}
+              title="No conversations yet"
+              action={
+                <Link className="btn btn-primary" to="/listings">
+                  Browse rentals <Icon name="arrowRight" size={18} />
+                </Link>
+              }
+            >
+              Open a listing and choose “Message the owner” to ask about dates,
+              pickup or access.
+            </EmptyState>
           )}
-
-          {!loading && rows.length > 0 && (
-            <ul className="inbox inbox-list" aria-label="Rental conversations">
-              {rows.map((c) => {
-                const other =
-                  c.renter_id === user.id
-                    ? c.owner?.display_name
-                    : c.renter?.display_name
-                const name = other?.trim() || 'Someone'
-                const count = unread[c.id] ?? 0
+          {!loading && !error && rows.length > 0 && visible.length === 0 && (
+            <EmptyState
+              icon={<Icon name={normalized ? 'search' : 'check'} size={28} />}
+              title={
+                normalized
+                  ? 'No matching conversations'
+                  : 'You’re all caught up'
+              }
+              action={
+                normalized ? (
+                  <button type="button" className="btn" onClick={clearSearch}>
+                    Clear search
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => selectView(false)}
+                  >
+                    Show all conversations
+                  </button>
+                )
+              }
+            >
+              {normalized
+                ? 'Try another name or listing title.'
+                : 'You have no unread conversations.'}
+            </EmptyState>
+          )}
+          {!loading && !error && visible.length > 0 && (
+            <ul className="inbox-list" aria-label="Rental conversations">
+              {visible.map((row) => {
+                const name = correspondent(row, userId)
+                const count = unread[row.id] ?? 0
                 return (
-                  <li key={c.id}>
+                  <li key={row.id}>
                     <Link
-                      className={`inbox-row${count > 0 ? ' inbox-row--unread' : ''}`}
-                      to={`/messages/${c.id}`}
+                      className={`inbox-row${count ? ' inbox-row--unread' : ''}`}
+                      to={`/messages/${row.id}`}
                     >
                       <span className="inbox-avatar" aria-hidden="true">
-                        {other?.trim() ? (
-                          name.charAt(0).toUpperCase()
-                        ) : (
-                          <Icon name="user" size={24} />
-                        )}
+                        {name.charAt(0).toUpperCase()}
                       </span>
-                      <span className="inbox__main">
+                      <span className="inbox-row__main">
                         <strong>{name}</strong>
-                        <span className="inbox-row__listing">
-                          About: {c.listings?.title ?? 'a listing'}
-                        </span>
-                        <span className="inbox-row__time">
-                          {c.last_message_at ? (
-                            <>
-                              Last message{' '}
-                              <time dateTime={c.last_message_at}>
-                                {formatTime(c.last_message_at)}
-                              </time>
-                            </>
-                          ) : (
-                            'No messages yet'
-                          )}
+                        <span>
+                          {row.listings?.title || 'Listing unavailable'}
                         </span>
                       </span>
                       <span className="inbox-row__trailing">
                         {count > 0 && (
-                          <span
-                            className="inbox-unread"
-                            aria-label={`${count} unread message${count === 1 ? '' : 's'}`}
-                          >
-                            {count} unread
-                          </span>
+                          <span className="inbox-unread">{count} unread</span>
                         )}
-                        <Icon name="chevronRight" size={20} />
+                        {row.last_message_at ? (
+                          <time dateTime={row.last_message_at}>
+                            {formatTime(row.last_message_at)}
+                          </time>
+                        ) : (
+                          'No messages yet'
+                        )}
                       </span>
+                      <Icon name="chevronRight" size={18} />
                     </Link>
                   </li>
                 )
               })}
             </ul>
           )}
-        </div>
-
-        <aside
-          className="inbox-guidance"
-          aria-labelledby="inbox-guidance-title"
-        >
-          <span className="inbox-guidance__icon" aria-hidden="true">
-            <Icon name="message" size={28} />
-          </span>
-          <p className="eyebrow">A little clarity goes a long way</p>
-          <h2 id="inbox-guidance-title">Make a plan before you rent.</h2>
-          <p>
-            Use your conversation to check the condition, confirm your dates,
-            and arrange pickup or access directly with the other person.
-          </p>
-          <div className="inbox-guidance__note">
-            <Icon name="clock" size={18} />
-            <p>
-              Your inbox checks for new messages every 15 seconds. You can also
-              refresh it above.
+          {query && !loading && !error && (
+            <p className="sr-only" role="status">
+              {visible.length} matching conversations
             </p>
-          </div>
-          <Link to="/bookings" className="btn btn-ghost">
-            View your bookings
-            <Icon name="arrowRight" size={18} />
-          </Link>
-        </aside>
+          )}
+        </section>
       </div>
     </section>
   )
+}
+
+export default function MessagesPage() {
+  const { user } = useAuth()
+  return <Inbox key={user.id} userId={user.id} />
 }

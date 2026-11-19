@@ -1,36 +1,69 @@
-/* Canonical eRental 2.0 runtime tokens. DESIGN.md documents this owner. */
+/* Runtime owner for the marketplace palette, dimensions and type. */
 :root {
-  --green-velvet: #29281e; --golden-sandalwood: #857861; --almond-light: #e7d4bb; --plum-wine: #48252f; --carbon-powder: #101211;
-  --bg: #faf7f2; --surface: #f0ebe3; --surface-elevated: #fffdf9;
-  --text: #101211; --muted: #645b50; --border: #ddd5c9; --input-border: #8a8175;
-  --primary: #48252f; --primary-dark: #311820; --primary-soft: #f0e5e8; --on-primary: #fff8ef;
-  --accent: #857861; --focus: #78445a; --input-bg: #fffdf9; --disabled-bg: #e5dfd6;
-  --success-bg: #e7efe6; --success-text: #28542d; --success-border: #a9bba4;
-  --warning-bg: #f6ecd4; --warning-text: #684b13; --warning-border: #b8a16d;
-  --danger-bg: #f7e9e6; --danger-text: #912f2b; --danger-border: #ca9c97; --danger: #922f2b; --on-danger: #fff8ef;
-  --info-bg: #e8edf1; --info-text: #34556d;
-  --hero-bg: #e7d4bb; --hero-text: #29281e; --hero-muted: #5e5140;
-  --footer-bg: #29281e; --footer-text: #eee4d6; --footer-muted: #c5b9a6; --footer-border: #5f5a4b;
-  --scrollbar-thumb: #9a8d7b; --scrollbar-track: var(--surface); --scrollbar-hover: #75644e; --overlay: rgb(16 18 17 / .65);
-  --shadow: 0 4px 16px rgb(41 40 30 / .06), 0 16px 48px rgb(41 40 30 / .05); --shadow-sm: 0 2px 8px rgb(41 40 30 / .05);
-  --font: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'DM Sans Variable', 'Manrope Variable', system-ui, sans-serif;
-  --s1: .25rem; --s2: .5rem; --s3: .75rem; --s4: 1rem; --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
-  --r-sm: 12px; --r-md: 20px; --r-lg: 28px; --container: 1320px; --nav-h: 80px; --photo-size: 6rem;
+  --palladian: #eee9df;
+  --oatmeal: #c9c1b1;
+  --burning-flame: #ffb162;
+  --truffle-trouble: #a35139;
+  --blue-fantastic: #2c3b4d;
+  --abyssal: #1b2632;
+
+  --bg: var(--palladian);
+  --surface: #e5dfd3;
+  --surface-elevated: #faf8f3;
+  --text: var(--abyssal);
+  --muted: #535b60;
+  --border: var(--oatmeal);
+  --input-border: #747670;
+  --input-bg: #fffdf8;
+  --disabled-bg: #ded9ce;
+
+  --primary: var(--blue-fantastic);
+  --primary-dark: var(--abyssal);
+  --on-primary: #fffdf8;
+  --primary-soft: #dde3e7;
+  --accent: var(--truffle-trouble);
+  --action: var(--burning-flame);
+  --action-hover: #ffa54b;
+  --on-action: var(--abyssal);
+  --focus: #943e27;
+
+  --success-bg: #e2eee6; --success-text: #24523d; --success-border: #7c9b88;
+  --warning-bg: #fff0d7; --warning-text: #714516; --warning-border: #b5915c;
+  --danger-bg: #f8e6e0; --danger-text: #842f23; --danger-border: #b07869;
+  --danger: #8d3827; --on-danger: #fff6ee;
+  --info-bg: #e2ebf1; --info-text: #294e65;
+
+  --hero-bg: var(--blue-fantastic); --hero-text: var(--palladian); --hero-muted: #d4dbe0;
+  --nav-bg: var(--abyssal); --nav-text: #fffaf2; --nav-muted: #d4dbe0;
+  --nav-surface: var(--blue-fantastic); --nav-border: #637181; --nav-focus: var(--burning-flame);
+  --footer-bg: var(--blue-fantastic); --footer-text: #fffaf2; --footer-muted: #d4dbe0; --footer-border: #667384;
+  --scrollbar-thumb: #877e70; --scrollbar-track: var(--surface); --scrollbar-hover: #686151;
+  --overlay: rgb(15 24 33 / .66);
+  --shadow: 0 12px 40px rgb(27 38 50 / .13);
+  --shadow-sm: 0 2px 8px rgb(27 38 50 / .08);
+
+  --font: 'DM Sans Variable', system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'DM Sans Variable', system-ui, sans-serif;
+  --font-editorial: Georgia, serif;
+  --s1: .25rem; --s2: .5rem; --s3: .75rem; --s4: 1rem;
+  --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 20px;
+  --container: 1320px; --nav-h: 68px; --dock-h: 60px; --photo-size: 6rem;
   color-scheme: light;
 }
 :root[data-theme='dark'] {
-  --bg: #101211; --surface: #1c1f1b; --surface-elevated: #252820;
-  --text: #f5ede2; --muted: #c2b6a6; --border: #494b40; --input-border: #8d8d7d;
-  --primary: #e7d4bb; --primary-dark: #f6e7d4; --primary-soft: #382b31; --on-primary: #29281e;
-  --focus: #e4b4ca; --input-bg: #191c17; --disabled-bg: #393c34;
-  --success-bg: #233a2a; --success-text: #b5ddb8; --success-border: #617d61;
-  --warning-bg: #3e331f; --warning-text: #ebd295; --warning-border: #998156;
-  --danger-bg: #422627; --danger-text: #ffc5bd; --danger-border: #a16f68; --danger: #f3b3aa; --on-danger: #3a1b19;
-  --info-bg: #253640; --info-text: #b7d9ef;
-  --hero-bg: #29281e; --hero-text: #e7d4bb; --hero-muted: #c5b9a6;
-  --footer-bg: #191c17; --footer-text: #eee4d6; --footer-muted: #c5b9a6; --footer-border: #494b40;
-  --scrollbar-thumb: #867c6a; --scrollbar-hover: #b4a38a; --overlay: rgb(0 0 0 / .76);
-  --shadow: 0 4px 16px rgb(0 0 0 / .15), 0 16px 48px rgb(0 0 0 / .18); --shadow-sm: 0 2px 8px rgb(0 0 0 / .15);
+  --bg: var(--abyssal); --surface: #263443; --surface-elevated: var(--blue-fantastic);
+  --text: #f7f2e9; --muted: #c6cbd0; --border: #4c5a69; --input-border: #83919a;
+  --input-bg: #202e3a; --disabled-bg: #3a4651;
+  --primary: #ffbf80; --primary-dark: #ffddb9; --primary-soft: #473b31; --on-primary: var(--abyssal);
+  --accent: #ffb192; --focus: var(--burning-flame);
+  --success-bg: #243d35; --success-text: #bce4cb; --success-border: #688d7a;
+  --warning-bg: #453724; --warning-text: #ffda97; --warning-border: #a28455;
+  --danger-bg: #492e2c; --danger-text: #ffc7b6; --danger-border: #ab7867;
+  --danger: #f7ae99; --on-danger: #311e1a;
+  --info-bg: #293e50; --info-text: #c0dff3;
+  --nav-bg: #15202a; --footer-bg: #16212c;
+  --scrollbar-thumb: #798995; --scrollbar-hover: #b2c1cc;
+  --overlay: rgb(8 15 20 / .78); --shadow: 0 12px 40px rgb(0 0 0 / .28); --shadow-sm: 0 2px 8px rgb(0 0 0 / .22);
   color-scheme: dark;
 }

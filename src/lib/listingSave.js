@@ -1,9 +1,13 @@
 // Keep IDs stable for the lifetime of a form. Retrying a request whose response
 // was lost must target the same records, never create another listing or photo.
-export async function saveListingRecord(client, { id, ownerId, fields, saved }) {
+export async function saveListingRecord(client, { id, ownerId, fields, saved, openingStatus }) {
   const update = () => client.from('listings').update(fields).eq('id', id).eq('owner_id', ownerId).select('id').single()
   if (saved) return update()
-  const result = await client.from('listings').insert({ id, owner_id: ownerId, ...fields }).select('id').single()
+  const record = { id, owner_id: ownerId, ...fields }
+  // Leave the database default in charge of available listings. An owner can
+  // publish unavailable first, then change it in the owner workspace later.
+  if (openingStatus === 'unavailable') record.status = 'unavailable'
+  const result = await client.from('listings').insert(record).select('id').single()
   // A prior attempt may have committed even though its response never arrived.
   // The owner filter and RLS still apply when reconciling that exact UUID.
   return result.error?.code === '23505' ? update() : result
