@@ -111,15 +111,14 @@ export default function ListingDetail() {
 
       <header className="listing-detail__heading">
         <div>
-          <p className="eyebrow">
-            {listing.categories?.name || 'Rental listing'}
-          </p>
           <h1>{listing.title}</h1>
           <div className="listing-detail__meta">
             <span>
               <Icon name="mapPin" size={18} />
               {listing.location_text}
             </span>
+            {listing.status === 'available' && <span className="rental-card__status rental-card__status--open">Open for requests</span>}
+            {listing.status === 'unavailable' && <span className="rental-card__status">Currently unavailable</span>}
             <span>Listed {formatDate(listing.created_at)}</span>
           </div>
         </div>
@@ -134,9 +133,15 @@ export default function ListingDetail() {
         )}
       </header>
 
+      <nav className="rental-jumps" aria-label="On this listing">
+        <a href="#rental-overview">Overview</a>
+        <a href="#rental-request">Rental rate &amp; dates</a>
+        <a href="#rental-owner">Owner</a>
+        <a href="#rental-reviews">Reviews</a>
+      </nav>
       <div className="listing-detail__layout">
         <section className="rental-gallery" aria-label="Listing photos">
-          <div className="gallery__main">
+          <div className={'gallery__main' + (photos.length ? '' : ' gallery__main--empty')}>
             {photos.length > 0 ? (
               <RentalPhoto
                 key={photos[activeIndex].storage_path}
@@ -195,14 +200,13 @@ export default function ListingDetail() {
         </section>
 
         <aside
+          id="rental-request"
           className="rental-request"
-          aria-label="Rental request and contact"
+          aria-label="Rental rate and booking"
+          tabIndex={-1}
         >
           <div className="rental-request__rate">
-            <p className="eyebrow">Your rental, your dates</p>
-            {listing.status === 'unavailable' && (
-              <span className="badge badge--inline">Currently unavailable</span>
-            )}
+            <h2 className="rental-request__heading"><Icon name="calendar" size={18} />Rental rate</h2>
             <p className="detail__price">
               {formatRate(listing.price, listing.price_period)}
             </p>
@@ -216,20 +220,12 @@ export default function ListingDetail() {
             key={`request-${listing.id}-${user?.id ?? 'guest'}`}
             listing={listing}
           />
-          <div className="rental-request__contact">
-            <MessageOwnerButton listing={listing} />
-          </div>
-          <div className="rental-request__report">
-            <ReportListing
-              key={`report-${listing.id}-${user?.id ?? 'guest'}`}
-              listing={listing}
-            />
-          </div>
+
         </aside>
 
         <div className="listing-detail__content">
-          <section className="listing-detail__section">
-            <h2>Description</h2>
+          <section className="listing-detail__section" id="rental-overview" tabIndex={-1}>
+            <h2>About this rental</h2>
             <p className="prewrap">{listing.description}</p>
           </section>
           {specs.length > 0 && (
@@ -253,6 +249,8 @@ export default function ListingDetail() {
           )}
 
           <section
+            id="rental-owner"
+            tabIndex={-1}
             className="owner-card rental-owner"
             aria-labelledby="rental-owner-title"
           >
@@ -279,20 +277,26 @@ export default function ListingDetail() {
                   Member since {formatDate(owner.created_at)}
                 </p>
               )}
+              <MessageOwnerButton listing={listing} />
             </div>
           </section>
 
           <section
+            id="rental-reviews"
+            tabIndex={-1}
             className="listing-detail__section listing-detail__reviews"
             aria-label="Listing reviews"
           >
             <ListingReviews listingId={listing.id} />
           </section>
-          <p className="notice">
-            eRental does not inspect or guarantee the condition of listed items
-            or properties. Renters and owners arrange handover directly with
-            each other.
-          </p>
+          <section className="listing-detail__section rental-safety">
+            <h2><Icon name="shield" size={22} /> Handover &amp; safety</h2>
+            <p>Ask about the condition before requesting dates. Renters and owners arrange handover directly. eRental does not inspect listings.</p>
+            <ReportListing
+              key={`report-${listing.id}-${user?.id ?? 'guest'}`}
+              listing={listing}
+            />
+          </section>
         </div>
       </div>
     </section>
