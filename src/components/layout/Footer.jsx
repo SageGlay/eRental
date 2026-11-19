@@ -10,15 +10,14 @@ export default function Footer() {
               <Brand />
             </Link>
             <p className="footer__about">
-              Good things, shared locally. Find your next rental or give
-              something you own a new purpose in Iligan City.
+              Find and list equipment, vehicles and spaces around Iligan City.
             </p>
             <span className="footer__place">
               Iligan City, Philippines · Prices in PHP
             </span>
           </div>
           <nav aria-label="Explore">
-            <h3>Find your next rental</h3>
+            <h3>Explore rentals</h3>
             <ul>
               <li>
                 <Link to="/listings">Browse rentals</Link>
@@ -32,7 +31,7 @@ export default function Footer() {
             </ul>
           </nav>
           <nav aria-label="Your marketplace">
-            <h3>Make it yours</h3>
+            <h3>Your account</h3>
             <ul>
               <li>
                 <Link to="/list">List an item</Link>
@@ -50,8 +49,7 @@ export default function Footer() {
           </nav>
         </div>
         <p className="footer__legal">
-          © 2026 eRental. Academic prototype. Payments are simulated and no
-          real money is processed.
+          © 2026 eRental. Payments are simulated. No money changes hands on eRental.
         </p>
       </div>
     </footer>

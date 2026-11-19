@@ -6,38 +6,24 @@ import Brand from '../Brand.jsx'
 import Icon from '../Icon.jsx'
 import ThemeControl from '../ThemeControl.jsx'
 
-function NavItems() {
-  const { user, isAdmin } = useAuth()
-  const unread = useUnreadCount()
-  const links = user
-    ? [
-        ['/listings', 'Browse'],
-        ['/my-listings', 'My listings'],
-        ['/bookings', 'Bookings'],
-        ['/messages', 'Messages'],
-        ...(isAdmin ? [['/admin', 'Admin']] : []),
-      ]
-    : [
-        ['/listings', 'Browse rentals'],
-        ['/#categories', 'Categories'],
-        ['/#how-it-works', 'How it works'],
-      ]
-  return links.map(([to, label]) =>
-    to.includes('#') ? (
-      <Link key={to} to={to}>
-        {label}
-      </Link>
-    ) : (
-      <NavLink key={to} to={to}>
-        {label}
-        {to === '/messages' && unread > 0 && (
-          <span className="nav-badge" aria-label={`${unread} unread`}>
-            {unread}
-          </span>
-        )}
-      </NavLink>
-    ),
-  )
+const discover = ['/', 'Discover', 'home']
+const browse = ['/listings', 'Browse', 'search']
+const listings = ['/my-listings', 'My listings', 'grid']
+const bookings = ['/bookings', 'Bookings', 'calendar']
+const messages = ['/messages', 'Messages', 'message']
+
+function TaskLinks({ items, unread = 0 }) {
+  return items.map(([to, label, icon]) => to.includes('#') ? (
+    <Link key={to} to={to}><Icon name={icon} size={18} />{label}</Link>
+  ) : (
+    <NavLink key={to} end={to === '/'} to={to}>
+      <Icon name={icon} size={18} />
+      <span>{label}</span>
+      {to === '/messages' && unread > 0 && (
+        <span className="nav-badge" aria-label={`${unread} unread`}>{unread}</span>
+      )}
+    </NavLink>
+  ))
 }
 function AccountActions({ mobile = false }) {
   const { user, profile, loading, signOut } = useAuth()
@@ -68,6 +54,10 @@ function AccountActions({ mobile = false }) {
       <Link to="/verification">
         <Icon name="shield" />
         Account verification
+      </Link>
+      <Link to="/profile#account-settings">
+        <Icon name="sliders" />
+        Account settings
       </Link>
       <button type="button" onClick={signOut}>
         <Icon name="logOut" />
@@ -102,6 +92,17 @@ function AccountActions({ mobile = false }) {
   )
 }
 export default function Navbar() {
+  const { user, isAdmin } = useAuth()
+  const unread = useUnreadCount()
+  const taskLinks = user
+    ? [bookings, messages, listings, ...(isAdmin ? [['/admin', 'Admin', 'shield']] : [])]
+    : [discover, ['/#categories', 'Categories', 'grid'], ['/list', 'List an item', 'plus']]
+  const shortcuts = user
+    ? [discover, browse, bookings, messages]
+    : [discover, browse, ['/list', 'List an item', 'plus'], ['/login', 'Log in', 'user']]
+  const menuLinks = user
+    ? [listings, ...(isAdmin ? [['/admin', 'Admin', 'shield']] : [])]
+    : [['/#categories', 'Categories', 'grid'], ['/#how-it-works', 'How renting works', 'key']]
   const [open, setOpen] = useState(false)
   const toggle = useRef(null)
   const header = useRef(null)
@@ -171,42 +172,50 @@ export default function Navbar() {
     }
   }, [open])
   return (
-    <header className="navbar" ref={header}>
-      <div className="container navbar__inner">
-        <Link to="/" aria-label="eRental home" className="brand-link">
-          <Brand />
-        </Link>
-        <nav className="navbar__links" aria-label="Main">
-          <NavItems />
-        </nav>
-        <div className="navbar__end">
-          <ThemeControl />
-          <div className="navbar__actions">
-            <AccountActions />
+    <>
+      <header className="navbar" ref={header}>
+        <div className="container navbar__inner">
+          <Link to="/" aria-label="eRental home" className="brand-link">
+            <Brand />
+          </Link>
+          <Link to="/listings#q" className="nav-search">
+            <Icon name="search" size={18} />Search rentals
+          </Link>
+          <nav className="navbar__links" aria-label="Main">
+            <TaskLinks items={taskLinks} unread={unread} />
+          </nav>
+          <div className="navbar__end">
+            <ThemeControl />
+            <div className="navbar__actions">
+              <AccountActions />
+            </div>
+            <button
+              ref={toggle}
+              type="button"
+              className="navbar__toggle"
+              aria-expanded={open}
+              aria-controls="mobile-menu"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              onClick={() => setOpen(!open)}
+            >
+              <Icon name={open ? 'x' : 'menu'} />
+            </button>
           </div>
-          <button
-            ref={toggle}
-            type="button"
-            className="navbar__toggle"
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            onClick={() => setOpen(!open)}
-          >
-            <Icon name={open ? 'x' : 'menu'} />
-          </button>
         </div>
-      </div>
-      {open && (
-        <nav
-          id="mobile-menu"
-          className="mobile-menu container"
-          aria-label="Mobile"
-        >
-          <NavItems />
-          <AccountActions mobile />
-        </nav>
-      )}
-    </header>
+        {open && (
+          <nav
+            id="mobile-menu"
+            className="mobile-menu container"
+            aria-label="Mobile"
+          >
+            <TaskLinks items={menuLinks} />
+            <AccountActions mobile />
+          </nav>
+        )}
+      </header>
+      <nav className="mobile-shortcuts" aria-label="Quick navigation">
+        <TaskLinks items={shortcuts} unread={unread} />
+      </nav>
+    </>
   )
 }

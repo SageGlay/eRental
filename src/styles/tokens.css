@@ -44,6 +44,7 @@
 
   --font: 'DM Sans Variable', system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque Variable', 'DM Sans Variable', system-ui, sans-serif;
+  --font-editorial: Georgia, serif;
   --s1: .25rem; --s2: .5rem; --s3: .75rem; --s4: 1rem;
   --s5: 1.5rem; --s6: 2rem; --s7: 3rem; --s8: 4.5rem;
   --r-sm: 8px; --r-md: 12px; --r-lg: 20px;

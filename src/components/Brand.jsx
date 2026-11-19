@@ -1,33 +1,11 @@
 export default function Brand({ compact = false }) {
   return (
     <span className="brand">
-      <svg
-        className="brand__symbol"
-        width="36"
-        height="36"
-        viewBox="0 0 36 36"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M6 27V12a7 7 0 0 1 14 0v12a7 7 0 0 0 14 0"
-          stroke="currentColor"
-          strokeWidth="4"
-          strokeLinecap="round"
-          transform="translate(-2 0)"
-        />
-        <path
-          d="M29 9v15a7 7 0 0 1-14 0V12"
-          stroke="currentColor"
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
+      <svg className="brand__symbol" width="40" height="36" viewBox="0 0 44 36" aria-hidden="true">
+        <path fill="currentColor" fillRule="evenodd" d="M4 2h22l8 8-8 8H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm21 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/>
+        <path className="brand__return" fillRule="evenodd" d="M40 18H18l-8 8 8 8h22a2 2 0 0 0 2-2V20a2 2 0 0 0-2-2Zm-21 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/>
       </svg>
-      {!compact && (
-        <span>
-          eRental<span className="brand__dot">.</span>
-        </span>
-      )}
+      {!compact && <span>eRental</span>}
     </span>
   )
 }

@@ -26,7 +26,7 @@ A uniform grid of framed cards made the previous inventory, forms and operationa
 
 ## Type, shape and rhythm
 
-Bricolage Grotesque supplies headings and the wordmark. DM Sans supplies readable forms, messages, prices and metadata. Both variable fonts are bundled locally and use swap. Headings use tight tracking and compact leading. Data comparisons use tabular numerals. Body copy starts at 16px. Use a four-pixel spacing base, 44px primary controls, 8px control corners, 12px content corners and 20px dialogs. Photography has a stable aspect ratio and a visible fallback. Inventory rows share dividers rather than nested panels.
+Bricolage Grotesque supplies headings and the wordmark. A single Georgia italic treatment emphasizes Iligan in the discovery headline. DM Sans supplies readable forms, messages, prices and metadata. Both variable fonts are bundled locally and use swap. Headings use tight tracking and compact leading. Data comparisons use tabular numerals. Body copy starts at 16px. Use a four-pixel spacing base, 44px primary controls, 8px control corners, 12px content corners and 20px dialogs. Photography has a stable aspect ratio and a visible fallback. Inventory rows share dividers rather than nested panels.
 
 ## Components and accessibility
 
