@@ -94,6 +94,10 @@ test('invalid, empty, oversized and falsely labelled documents never upload', as
       },
       'Use a JPEG',
     ],
+    [
+      { name: 'sample.bin', mimeType: 'constructor', buffer: Buffer.from('sample') },
+      'Use a JPEG',
+    ],
     [{ ...png, buffer: Buffer.alloc(0) }, 'document is empty'],
     [{ ...png, buffer: Buffer.alloc(5 * 1024 * 1024 + 1) }, '5 MB or smaller'],
     [
@@ -548,9 +552,7 @@ test('review confirmation and completion keep keyboard focus in a meaningful pla
   ).toBeFocused()
 })
 
-test('private object URLs are revoked when the review closes', async ({
-  page,
-}) => {
+async function trackDocumentUrls(page) {
   await page.addInitScript(() => {
     window.objectUrls = { made: [], revoked: [] }
     const create = URL.createObjectURL.bind(URL)
@@ -565,6 +567,10 @@ test('private object URLs are revoked when the review closes', async ({
       return revoke(url)
     }
   })
+}
+
+test('private object URLs are revoked when the review closes', async ({ page }) => {
+  await trackDocumentUrls(page)
   await mockVerification(page, { admin: true, rows: [sampleRequest()] })
   await page.goto('/admin/verification')
   await page
@@ -770,4 +776,75 @@ test('safe legacy document names with spaces are encoded without changing their 
       c.path.endsWith(`/${USER_ID}/old%20school%20ID.png`),
     ),
   ).toBe(true)
+})
+
+
+test('dismissing an uncertain review reconciles its final state before offering another decision', async ({ page }) => {
+  let decided = false
+  const { model } = await mockVerification(page, {
+    admin: true,
+    rows: [sampleRequest()],
+    override: async (route, { url, state }) => {
+      if (!url.pathname.endsWith('/review_verification')) return false
+      decided = true
+      state.rows[0].status = 'approved'
+      await apiError(route, 'Could not confirm response', 500)
+      return true
+    },
+  })
+  await page.goto('/admin/verification')
+  const open = page.getByRole('button', { name: 'Review request from Test renter' })
+  await open.click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Approve', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Confirm approval' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('couldn’t confirm')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('heading', { name: 'No pending requests' })).toBeVisible()
+  await expect(open).toHaveCount(0)
+  expect(decided).toBe(true)
+  expect(calls(model, '/rest/v1/rpc/review_verification', 'POST')).toHaveLength(1)
+})
+
+test('a mislabeled synthetic document cannot produce a private preview URL', async ({ page }) => {
+  await trackDocumentUrls(page)
+  await mockVerification(page, {
+    admin: true,
+    rows: [sampleRequest()],
+    override: async (route, { url, method }) => {
+      if (method !== 'GET' || !url.pathname.includes('/verification-documents/')) return false
+      await route.fulfill({ body: Buffer.from('Synthetic document with a different file type'), contentType: 'image/png' })
+      return true
+    },
+  })
+  await page.goto('/admin/verification')
+  await page.getByRole('button', { name: 'Review request from Test renter' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'View private document' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('couldn’t open')
+  await expect(dialog.getByRole('link', { name: 'Open document in new tab' })).toHaveCount(0)
+  expect(await page.evaluate(() => window.objectUrls.made)).toEqual([])
+})
+
+test('logging out in another tab closes the review and revokes its active private preview', async ({ page, context }) => {
+  await trackDocumentUrls(page)
+  const { model } = await mockVerification(page, { admin: true, rows: [sampleRequest()] })
+  await page.goto('/admin/verification')
+  await page.getByRole('button', { name: 'Review request from Test renter' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'View private document' }).click()
+  await expect(dialog.getByRole('img')).toBeVisible()
+
+  const account = await context.newPage()
+  await mockVerification(account, { admin: true })
+  await account.goto('/profile')
+  await account.getByLabel('My account', { exact: true }).click()
+  await account.getByRole('button', { name: 'Log out', exact: true }).click()
+  await expect(account).toHaveURL(/\/login$/)
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(dialog).toHaveCount(0)
+  const urls = await page.evaluate(() => window.objectUrls)
+  expect(urls.made).toHaveLength(1)
+  expect(urls.revoked).toEqual(urls.made)
+  expect(calls(model, '/rest/v1/rpc/review_verification', 'POST')).toHaveLength(0)
 })

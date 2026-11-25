@@ -108,7 +108,7 @@ function ReviewDialog({ request, onClose, onDone, onRefresh }) {
     }
   }
   return (
-    <Dialog title="Review verification" onClose={onClose} busy={busy}>
+    <Dialog title="Review verification" onClose={needsRefresh ? onRefresh : onClose} busy={busy}>
       <div className="admin-verification-review">
         <div className="verification-applicant-summary">
           <span className="verification-applicant-icon">
@@ -139,8 +139,8 @@ function ReviewDialog({ request, onClose, onDone, onRefresh }) {
           </div>
         </dl>
         <p className="field__hint">
-          Profile details are current. Compare the document with the applicant
-          before making a decision.
+          Compare the document with the profile details loaded with this queue.
+          Close the review and refresh the queue to check for changes.
         </p>
         {request.details && (
           <div className="verification-applicant-note">
