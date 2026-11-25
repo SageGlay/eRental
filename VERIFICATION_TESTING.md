@@ -4,14 +4,14 @@
 
 Open My profile → **Account verification** (`/verification`). Authorized administrators can open Admin → **Account verification** (`/admin/verification`). The existing listing-report admin page remains at `/admin`.
 
-The frontend uses the existing hosted verification contract exported by the project owner into [supabase/contracts/verification.json](supabase/contracts/verification.json). That file is a security/schema reference, not a migration. No hosted data, policies or Storage permissions were changed by this implementation.
+The frontend uses the recorded verification contract supplied by the project owner. The release runbook compares that snapshot with fresh metadata from the designated staging project before applying the migration. [Contract snapshot](supabase/contracts/verification.json) · [Deployment procedure](VERIFICATION_SECURITY_DEPLOYMENT.md)
 
 Browser fixture tests run with fictional API responses. They do not upload real documents or prove live RLS. The live acceptance cases in this guide remain unrun until project connectivity and designated test accounts are available.
 
 ## Before testing
 
 1. Follow [LOCAL_SETUP_AND_TESTING.md](LOCAL_SETUP_AND_TESTING.md) and start Vite. Open `http://localhost:5173/` on that computer.
-2. Use designated test accounts: an ordinary individual, a business user, a second unrelated user and an existing authorized administrator.
+2. Use five designated staging accounts, including an individual applicant, a business applicant, an unrelated ordinary user and two existing authorized administrators.
 3. Create a non-sensitive sample image/PDF marked **TEST DOCUMENT — NOT VALID ID**. Do not use real identification for development tests.
 4. The existing private bucket accepts JPEG, PNG, WebP and PDF, up to **5 MB**. It must remain private.
 5. Never disable RLS, add a hardcoded admin account, share service-role keys, reset/reseed the project or modify production users merely for a demo.
@@ -43,12 +43,12 @@ Browser fixture tests run with fictional API responses. They do not upload real 
 
 1. Log in as an existing authorized administrator. Open Admin → Account verification. Direct navigation as a regular user must show the denial state; signed-out visitors go to login.
 2. Filter Pending/Approved/Rejected and change newest/oldest sorting. Confirm ten records per page, correct counts/ranges, matching mobile cards, and that Back/Forward restores filter/sort/page URLs. Reviewing the last record on a later page must recover to a valid page.
-3. Click **Review request**. Compare the current applicant name/business with the request and sample document. The native modal should initially focus Close, trap Tab navigation, close on Escape while idle, and restore focus on cancel.
+3. Click **Review request**. Compare the applicant name or business name loaded with the queue against the request and sample document. Close the review and refresh the queue to check for profile edits. The native modal should initially focus Close, trap Tab navigation, close on Escape while idle, and restore focus on cancel.
 4. Click **View private document**. The SDK downloads it with the authenticated session; images display in the dialog and PDFs can open through the transient document link. No public URL is generated. Close/Hide the document when finished. The local blob URL is revoked on close; content already opened or downloaded cannot be remotely recalled.
 5. Add an optional approval note. Click **Approve**, read the named confirmation, then **Confirm approval**. The client must call `review_verification` with `p_action = approve`, not PATCH submission status/profile badges. Confirm the queue refreshes and the real applicant profile changes.
 6. For another pending sample, click Reject with no note. Confirm a required-reason error and note-input focus. Enter a reason, choose Reject, then Confirm rejection. Confirm the rejected request/note is visible to its applicant and no badge is granted.
 7. A changed/mismatched account type or unsafe document path disables approval in this UI. The request may still be rejected with an explanation; do not manually grant a badge to work around an error.
-8. For denied/stale/timed-out RPC responses, confirm no success is shown, the note remains available, Close becomes usable, and **Refresh queue** is required before another decision. Never blindly retry an unknown completed review.
+8. For an uncertain RPC result, confirm the dialog shows the error and preserves the note while open. Use **Refresh queue** or dismiss the dialog. A fresh read must finish before another decision is available. If the first decision committed, the request must have left the pending queue.
 9. After a successful review removes its row, keyboard focus should move to the stable queue heading. At 390px/320px widths, modal content/actions must remain reachable without document-level horizontal overflow.
 
 ## Cross-user security checks — live environment required
@@ -62,15 +62,13 @@ Use two designated test users and only known sample IDs/paths:
 - Confirm the browser sends current-user authorization to Storage and never a privileged key.
 - Do not loosen permissions if a sample is denied. Inspect the actual policy and intended test identity.
 
-These live negative cases have not been executed by the cloud agent: the environment proxy returns a tunnel 403 for the Supabase project. Fixture denials confirm UI handling only.
+The hosted checks are **BLOCKED** until a designated staging project, its five test accounts and authorized access are available. Use the VS01–VS12 procedure to record results from the real Auth, RPC and Storage services. [Staging acceptance](VERIFICATION_SECURITY_DEPLOYMENT.md)
 
-## Existing RPC hardening proposal — not applied
+## Concurrent review and eligibility
 
-Independent review of the supplied SQL found two backend races: concurrent administrators can overwrite one another's decisions, and account type can change while a request is pending. The existing RPC does not lock/recheck those states.
+Migration `20261119184647` locks a submission before examining its status. Approval also locks the current applicant profile and validates the requested verification kind, account type and business name. The original export and the hardened function have separate, recorded fingerprints. Confirm the actual hosted fingerprint before deployment. [Migration](supabase/migrations/20261119184647_harden_verification_review.sql) · [Deployment procedure](VERIFICATION_SECURITY_DEPLOYMENT.md)
 
-[The reviewable proposal](supabase/proposals/20261118_serialize_verification_reviews.sql) locks the submission before its pending check and locks/rechecks the profile before approval. It preserves the signature, admin authorization, action names and existing profile update semantics. It is outside the migrations directory and **was not applied**.
-
-Before production/concurrent-admin use, review and test it in a designated database. Test two admins racing approve/reject and a user changing account type during review. Confirm only one decision commits and mismatched approval is rejected. Real name/document snapshot guarantees are not implemented by this proposal and require a separate business design; the UI shows current profile details.
+Use the PostgreSQL suite for actual lock waits, duplicate and conflicting decisions, atomic failure, eligibility changes, role checks and the guarded rollback. The application stores no immutable name snapshot with a submission. Administrators should refresh the queue when checking a changed identity. [Database and browser results](VERIFICATION_SECURITY_TEST_RESULTS.md)
 
 ## Failure/retry and retention limits
 
@@ -85,13 +83,14 @@ npm.cmd ci
 npx.cmd playwright install chromium
 npm.cmd test
 npm.cmd run build
+npm.cmd run test:db
 ```
 
-The suite covers existing core features plus verification upload validation, business/individual types, duplicate/uncertain completion, private viewing/denial, authoritative badges, rejection/resubmission, admin filters/pagination, keyboard focus, URL revocation, malformed paths, and timeout recovery. All operations use synthetic fixture responses, not production data.
+Playwright exercises the marketplace and verification screens with synthetic API responses. The verification cases cover upload validation, authorized previews, session changes, transient URL revocation, malformed paths, badge refresh and recovery after an uncertain review. The database command requires a working Docker daemon and starts a disposable PostgreSQL instance from the recorded contract. [Execution results and coverage](VERIFICATION_SECURITY_TEST_RESULTS.md)
 
 ## Refresh the contract export when schema changes
 
-The owner has already supplied the current export. If a maintainer changes the verification schema later:
+The owner-supplied export records the earlier schema. Capture fresh metadata on the designated project during staging preflight and after deployment.
 
 1. Open the existing project in Supabase Dashboard → SQL Editor → New query.
 2. Paste [verification_contract.sql](supabase/diagnostics/verification_contract.sql) and Run.

@@ -45,7 +45,7 @@ Successful submission is acknowledged only after confirmed persistence. A privat
 
 Admin decisions use only review_verification, after an app-owned confirmation. Rejection requires a nonblank reason. A mismatched account type or unsafe document path cannot be approved in this UI. Busy review waits have a 15-second deadline; uncertain results preserve the note and require queue refresh before another attempt. No success is shown on a failed/uncertain RPC.
 
-The existing RPC needs separate backend hardening for concurrent decisions/account-type edits. The [proposal](supabase/proposals/20261118_serialize_verification_reviews.sql) is reviewable and undeployed. UI guards do not fix that hosted concurrency gap.
+After an uncertain result, dismissing the dialog also reloads the queue. A new decision becomes available after a successful read. On the server, the tested review migration locks the request and checks current account eligibility during approval. Hosted acceptance is pending. [Review migration](supabase/migrations/20261119184647_harden_verification_review.sql) · [Release gates](VERIFICATION_SECURITY_DEPLOYMENT.md)
 
 ## Privacy and accessibility
 
