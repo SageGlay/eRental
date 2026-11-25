@@ -54,7 +54,7 @@ async function withDeadline(operation, milliseconds = 30000) {
 
 export function validateDocument(file) {
   if (!file) return 'Choose a document to upload.'
-  if (!DOCUMENT_MIME_TYPES[file.type])
+  if (!Object.hasOwn(DOCUMENT_MIME_TYPES, file.type))
     return 'Use a JPEG, PNG, WebP or PDF document.'
   if (!file.size) return 'The document is empty. Choose another file.'
   if (file.size > MAX_DOCUMENT_BYTES)
@@ -198,12 +198,9 @@ export async function downloadVerificationDocument(
     .from(VERIFICATION_BUCKET)
     .download(encodedPath, {}, { signal, cache: 'no-store' })
   if (error) throw error
-  if (
-    !data ||
-    !DOCUMENT_MIME_TYPES[data.type] ||
-    !data.size ||
-    data.size > MAX_DOCUMENT_BYTES
-  )
+  // Files can also arrive through other authorized Storage clients. Validate
+  // their signature as we do on upload before creating a browser preview.
+  if (await validateDocumentContents(data))
     throw new Error('Unsupported document.')
   return data
 }
