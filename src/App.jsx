@@ -18,8 +18,11 @@ import RequireAdmin from './components/RequireAdmin.jsx'
 const BookingsPage = lazy(() => import('./pages/BookingsPage.jsx'))
 const EditListing = lazy(() => import('./pages/EditListing.jsx'))
 const MyListings = lazy(() => import('./pages/MyListings.jsx'))
-import BrowsePage from './pages/BrowsePage.jsx'
 import NotFound from './pages/NotFound.jsx'
+const BrowsePage = lazy(() => import('./pages/BrowsePage.jsx'))
+const SavedListingsPage = lazy(() => import('./pages/SavedListingsPage.jsx'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage.jsx'))
+const LegalPage = lazy(() => import('./pages/LegalPage.jsx'))
 const VerificationPage = lazy(() => import('./pages/VerificationPage.jsx'))
 const AdminVerificationPage = lazy(
   () => import('./pages/AdminVerificationPage.jsx'),
@@ -56,6 +59,10 @@ export default function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
+        <Route path="saved" element={<RequireAuth><SavedListingsPage /></RequireAuth>} />
+        <Route path="notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+        <Route path="terms" element={<LegalPage kind="terms" />} />
+        <Route path="privacy" element={<LegalPage kind="privacy" />} />
         <Route path="listings" element={<BrowsePage />} />
         <Route path="listings/:id" element={<ListingDetail />} />
         <Route

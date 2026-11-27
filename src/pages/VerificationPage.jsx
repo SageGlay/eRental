@@ -474,6 +474,7 @@ export default function VerificationPage() {
             Only you and authorized administrators can access your document.
             Other members see your badge after approval.
           </p>
+          <p><Link to="/privacy#verification-documents">Read the privacy notice for verification documents</Link></p>
           <h3>What the badge covers</h3>
           <p>
             It confirms a review of your identity or business. Renters still

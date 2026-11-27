@@ -1,4 +1,6 @@
 const paths = {
+  bookmark: 'M6 3h12v18l-6-4-6 4V3Z',
+  bell: 'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5l-2 3Z M10 20a2 2 0 0 0 4 0',
   refresh: 'M20 4v6h-6 M4 20v-6h6 M19.5 9A8 8 0 0 0 6 6 M4.5 15A8 8 0 0 0 18 18',
   search: 'm21 21-4.4-4.4 M19 10.5a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0',
   mapPin:

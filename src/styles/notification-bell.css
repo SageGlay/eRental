@@ -1,0 +1,30 @@
+.notification-bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  color: var(--nav-text);
+  border-radius: var(--r-sm);
+  text-decoration: none;
+}
+.notification-bell:hover, .notification-bell[aria-current='page'] {
+  color: var(--action);
+  outline: 1px solid var(--nav-border);
+}
+.notification-bell__count {
+  position: absolute;
+  inset-block-start: 1px;
+  inset-inline-end: 0;
+  padding-inline: var(--s1);
+  min-width: 16px;
+  border-radius: var(--r-sm);
+  background: var(--action);
+  color: var(--on-action);
+  text-align: center;
+  font-size: .6875rem;
+  line-height: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

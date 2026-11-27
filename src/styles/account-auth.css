@@ -53,3 +53,5 @@
   .account-entry__head p { max-width: none; color: var(--muted); }
   .account-entry__symbol { display: none; }
 }
+
+.account-entry__legal { margin: var(--s4) 0 0; color: var(--muted); font-size: .875rem; }

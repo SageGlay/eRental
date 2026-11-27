@@ -64,7 +64,7 @@ test('latest listings recover in place and only confirm an empty feed after a su
 test('a listing card shows an owner badge only when the public profile confirms its kind and date', async ({ page }) => {
   await mockMarketplace(page, async (route, { url }) => {
     if (url.pathname !== '/rest/v1/listings') return false
-    expect(url.searchParams.get('select')).toContain('profiles(verified_kind,verified_at)')
+    expect(url.searchParams.get('select')).toContain('profiles(display_name,account_type,business_name,verified_kind,verified_at)')
     await json(route, [
       { ...listing, profiles: { verified_kind: 'identity', verified_at: '2026-01-01T00:00:00Z' } },
       { ...listing, id: 'unverified', title: 'Tripod', profiles: { verified_kind: 'identity', verified_at: null } },

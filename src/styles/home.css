@@ -43,3 +43,12 @@
   .home-hero__content h1 { font-size: clamp(1.9375rem, 9vw, 2.375rem); }
   .home-hero__content p { font-size: .8125rem; }
 }
+.discovery-section { margin-block: var(--s7); }
+.discovery-caption { margin: 0 0 var(--s4); color: var(--muted); }
+.discovery-featured { border-top: 2px solid var(--primary); padding-top: var(--s4); }
+.discovery-featured-grid > li { display: grid; grid-template-rows: 1fr auto; min-width: 0; }
+.discovery-owner { display: flex; align-items: center; gap: var(--s2); margin: var(--s2) 0 0; color: var(--muted); font-size: .875rem; }
+.discovery-owner svg { flex-shrink: 0; }
+@media (min-width: 1080px) {
+  .home-page .discovery-featured-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

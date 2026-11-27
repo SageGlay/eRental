@@ -48,9 +48,13 @@ export default function Footer() {
             </ul>
           </nav>
         </div>
-        <p className="footer__legal">
-          © 2026 eRental. Payments are simulated. No money changes hands on eRental.
-        </p>
+        <div className="footer__legal">
+          <p>© 2026 eRental. Payments are simulated. No money changes hands on eRental.</p>
+          <nav aria-label="Legal information">
+            <Link to="/terms">Terms and conditions</Link>
+            <Link to="/privacy">Privacy notice</Link>
+          </nav>
+        </div>
       </div>
     </footer>
   )

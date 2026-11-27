@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
 import SearchBar from '../components/SearchBar.jsx'
-import EmptyState from '../components/EmptyState.jsx'
-import ListingCard from '../components/ListingCard.jsx'
-import ListingSkeleton from '../components/ListingSkeleton.jsx'
+import DiscoveryInventory from '../components/DiscoveryInventory.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import Icon from '../components/Icon.jsx'
 import LoadError from '../components/LoadError.jsx'
-import { useLatestListings } from '../hooks/useListings.js'
 import { useCategories } from '../hooks/useCategories.js'
 import '../styles/home.css'
 
@@ -25,7 +23,7 @@ const rentingSteps = [
 
 export default function Home() {
   const { categories, loading, error, retry } = useCategories()
-  const latest = useLatestListings(8)
+  const auth = useAuth()
 
   return (
     <div className="home-page container">
@@ -64,22 +62,9 @@ export default function Home() {
         )}
       </section>
 
-      <section className="home-latest" aria-labelledby="latest-title">
-        <div className="home-section-head">
-          <h2 id="latest-title">Latest listings</h2>
-          <Link className="home-text-link" to="/listings?sort=newest">View all <Icon name="arrowRight" size={16} /></Link>
-        </div>
-        {latest.loading && <><p className="sr-only" role="status">Loading listings…</p><ListingSkeleton count={4} /></>}
-        {latest.error && <LoadError onRetry={latest.retry}>{latest.error}</LoadError>}
-        {!latest.loading && !latest.error && latest.listings.length === 0 && (
-          <EmptyState icon={<Icon name="box" size={32} />} title="No listings yet" action={<Link className="btn btn-primary" to="/list">List an item</Link>}>
-            Have something to rent out in Iligan? Add photos, a rate and your pickup area.
-          </EmptyState>
-        )}
-        {latest.listings.length > 0 && (
-          <ul className="listing-grid">{latest.listings.map((listing) => <li key={listing.id}><ListingCard listing={listing} /></li>)}</ul>
-        )}
-      </section>
+      {auth.loading
+        ? <p role="status">Loading listings…</p>
+        : <DiscoveryInventory key={auth.user?.id || 'guest'} userId={auth.user?.id || null} />}
 
       <div className="home-guide" id="how-it-works">
         <section aria-labelledby="how-title">

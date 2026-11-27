@@ -5,6 +5,7 @@ import { useUnreadCount } from '../../hooks/useUnreadCount.js'
 import Brand from '../Brand.jsx'
 import Icon from '../Icon.jsx'
 import ThemeControl from '../ThemeControl.jsx'
+import NotificationBell from '../NotificationBell.jsx'
 
 const discover = ['/', 'Discover', 'home']
 const browse = ['/listings', 'Browse', 'search']
@@ -50,6 +51,10 @@ function AccountActions({ mobile = false }) {
       <Link to="/profile">
         <Icon name="user" />
         My profile
+      </Link>
+      <Link to="/saved">
+        <Icon name="bookmark" />
+        Saved listings
       </Link>
       <Link to="/verification">
         <Icon name="shield" />
@@ -185,6 +190,7 @@ export default function Navbar() {
             <TaskLinks items={taskLinks} unread={unread} />
           </nav>
           <div className="navbar__end">
+            <NotificationBell />
             <ThemeControl />
             <div className="navbar__actions">
               <AccountActions />

@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { SavedListingsProvider } from './context/SavedListingsContext.jsx'
+import { NotificationsProvider } from './context/NotificationsContext.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import './styles/fonts.css'
 import './styles/tokens.css'
@@ -28,7 +30,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <SavedListingsProvider>
+          <NotificationsProvider>
+            <RouterProvider router={router} />
+          </NotificationsProvider>
+        </SavedListingsProvider>
       </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>,
