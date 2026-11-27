@@ -32,3 +32,25 @@ Booking and payment handlers check the actor against the persisted participants 
 PB-031 remains partial. Viewing scheduled, rescheduled and cancelled require an authorized viewing workflow. Expanded rental application updates, rental agreement acceptance, payment due/overdue and payment proof decisions require their own persistent source operations. Their event producers are deferred. When a source exists, define its recipient and actor, expected transition, controlled event type, destination and stable operation or revision key. For rescheduling and partial payments, distinct legitimate revisions must have distinct keys. Add constraint/template support, a transaction-owned producer, tenant-isolation and rollback tests, and hosted acceptance before enabling delivery.
 
 Optional report-resolution, listing-removal and administrator new-verification alerts are outside this implementation. Existing moderation and verification queues continue to provide their respective workflows.
+
+## Communication and Trust additions
+
+These events extend the same recipient-scoped store. All producers run inside their state-changing transaction. Previews contain controlled event text and opaque identifiers. Appointment addresses, conversation messages, dispute details and moderation reasons stay in the authorized workflow.
+
+| Event | Confirmed source and actor | Recipient | Destination | Deduplication |
+| --- | --- | --- | --- | --- |
+| viewing_requested | Renter creates a valid appointment | Listing owner | Incoming viewing | Appointment history event ID |
+| viewing_confirmed | Owner confirms a pending request | Renter | Viewing | Appointment history event ID |
+| viewing_declined | Owner declines a pending request | Renter | Viewing | Appointment history event ID |
+| viewing_reschedule_proposed | Owner proposes a distinct future time | Renter | Viewing | Appointment history event ID |
+| viewing_reschedule_accepted | Renter accepts the proposed time | Owner | Incoming viewing | Appointment history event ID |
+| viewing_reschedule_declined | Renter rejects the proposal | Owner | Incoming viewing | Appointment history event ID |
+| viewing_cancelled | Either eligible participant cancels | Other participant | Their viewing | Appointment history event ID |
+| viewing_completed | Owner completes an elapsed viewing | Renter | Viewing | Appointment history event ID |
+| review_published | Eligible renter reviews a completed booking | Snapshot owner of that rental | Listing reviews | Review ID |
+| review_response_published | Authorized owner first creates a public response | Renter reviewer | Listing reviews | Review ID |
+| review_dispute_resolved | Authorized moderator finalizes a pending dispute | Dispute submitter | Private dispute history | Dispute ID |
+| review_visibility_updated | Authorized uphold decision hides a published review | Renter reviewer | Listing reviews | Dispute ID |
+| conversation_report_resolved | Authorized moderator finalizes a report | Reporter | Their conversation's report history | Report ID |
+
+The existing `inquiry_received` and `message_received` producers remain active and deduplicate the stable persisted message ID. Realtime updates refresh clients and have no notification writer. Rescheduling assigns a distinct history event ID for each legitimate transition. Blocks emit no notices. Expanded application and future financial events still need their source modules, so PB-031 remains partial. [Communication and Trust handoff](COMMUNICATION_TRUST_HANDOFF.md)

@@ -12,6 +12,8 @@ const returnPaths = [
   '/bookings',
   '/saved',
   '/notifications',
+  '/viewings',
+  '/review-disputes',
   '/listings/:id',
   '/messages',
   '/messages/:id',
@@ -19,6 +21,8 @@ const returnPaths = [
   '/verification',
   '/admin',
   '/admin/verification',
+  '/admin/conversation-reports',
+  '/admin/review-disputes',
   '/listings/:id/edit',
 ]
 

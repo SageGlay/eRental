@@ -9,6 +9,7 @@ import ListingReviews from '../components/ListingReviews.jsx'
 import OwnerRating from '../components/OwnerRating.jsx'
 import MessageOwnerButton from '../components/MessageOwnerButton.jsx'
 import RequestForm from '../components/RequestForm.jsx'
+import RequestViewingButton from '../components/RequestViewingButton.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import BookmarkButton from '../components/BookmarkButton.jsx'
 import { recordView, visibleRental } from '../lib/discovery.js'
@@ -235,7 +236,11 @@ function RentalDetails({ id, user, trackViews }) {
             key={`request-${listing.id}-${user?.id ?? 'guest'}`}
             listing={listing}
           />
-
+          {listing.status === 'available' && !listing.removed_by_admin && user?.id !== listing.owner_id && (
+            <div className="rental-request__viewing">
+              <RequestViewingButton key={listing.id} listingId={listing.id} ownerId={listing.owner_id} />
+            </div>
+          )}
         </aside>
 
         <div className="listing-detail__content">

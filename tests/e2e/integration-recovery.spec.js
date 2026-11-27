@@ -165,18 +165,18 @@ test('a stalled send checks the refreshed thread for an already stored message',
   const response = gate()
   const text = 'A sample message with a lost response'
   const rows = [message('earlier', 'Earlier sample')]
-  const model = await mockMarketplace(page, async (route, { url, method }) => {
+  const model = await mockMarketplace(page, async (route, { url, method, body }) => {
     if (url.pathname === '/rest/v1/conversations') {
       await json(route, [conversation(firstConversation)])
       return true
     }
-    if (url.pathname !== '/rest/v1/messages') return false
-    if (method === 'POST') {
-      rows.push(message('stored', text, USER_ID))
+    if (url.pathname === '/rest/v1/rpc/send_conversation_message' && method === 'POST') {
+      rows.push(message(body.p_operation_id, body.p_body, USER_ID))
       await response.pending
-      await json(route, null, 201)
+      await json(route, body.p_operation_id)
       return true
     }
+    if (url.pathname !== '/rest/v1/messages') return false
     await json(route, rows)
     return true
   })
@@ -186,7 +186,7 @@ test('a stalled send checks the refreshed thread for an already stored message',
     await page.getByLabel('Your message').fill(text)
     await page.getByRole('button', { name: 'Send', exact: true }).click()
     await expect
-      .poll(() => calls(model, '/rest/v1/messages', 'POST').length)
+      .poll(() => calls(model, '/rest/v1/rpc/send_conversation_message', 'POST').length)
       .toBe(1)
     await page.clock.fastForward(15_100)
     await expect(page.getByRole('alert')).toContainText(
@@ -208,7 +208,7 @@ test('a stalled send checks the refreshed thread for an already stored message',
       'A matching message is already in this conversation.',
     )
     await expect(page.getByLabel('Your message')).toHaveValue('')
-    expect(calls(model, '/rest/v1/messages', 'POST')).toHaveLength(1)
+    expect(calls(model, '/rest/v1/rpc/send_conversation_message', 'POST')).toHaveLength(1)
   } finally {
     response.release()
   }

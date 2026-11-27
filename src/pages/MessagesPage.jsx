@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { formatTime } from '../lib/messages.js'
+import { listenForMessageActivity } from '../hooks/useMessageRealtime.js'
 import EmptyState from '../components/EmptyState.jsx'
 import LoadError from '../components/LoadError.jsx'
 import PageHeading from '../components/PageHeading.jsx'
@@ -34,9 +35,13 @@ function Inbox({ userId }) {
   useEffect(() => {
     let cancelled = false
     let active = null
+    let refreshQueued = false
     setState((previous) => ({ ...previous, loading: true, error: null }))
     const load = async () => {
-      if (active) return
+      if (active) {
+        refreshQueued = true
+        return
+      }
       active = new AbortController()
       const timeout = setTimeout(() => active?.abort(), 15_000)
       try {
@@ -75,13 +80,24 @@ function Inbox({ userId }) {
       } finally {
         clearTimeout(timeout)
         active = null
+        if (!cancelled && refreshQueued) {
+          refreshQueued = false
+          void load()
+        }
       }
     }
     load()
-    const timer = setInterval(load, 15_000)
+    const visible = () => { if (!document.hidden) void load() }
+    const unlisten = listenForMessageActivity(visible)
+    const timer = setInterval(visible, 15_000)
+    window.addEventListener('focus', visible)
+    document.addEventListener('visibilitychange', visible)
     return () => {
       cancelled = true
       clearInterval(timer)
+      window.removeEventListener('focus', visible)
+      document.removeEventListener('visibilitychange', visible)
+      unlisten()
       active?.abort()
     }
   }, [userId, revision])

@@ -49,6 +49,8 @@ These tests validate frontend behavior against controlled API responses. They do
 - Persistent saved rentals, clearable recent history and category recommendations. The homepage features available, photographed rentals from real owners.
 - An account notification center for booking activity, messages, simulated payments and verification decisions, with an independent unread count and read controls.
 - Public draft terms and privacy information.
+- Participant-scoped Realtime messaging, editable quick responses, mutual contact restrictions, viewing appointments and targeted conversation reports.
+- Public owner reputation, owner review replies and audited moderation of review disputes.
 
 The saved, history and notification features depend on the reviewed marketplace essentials migration. [Milestone handoff](MARKETPLACE_ESSENTIALS_HANDOFF.md) · [Staging and rollout](MARKETPLACE_ESSENTIALS_DEPLOYMENT.md)
 
@@ -61,3 +63,5 @@ The checked-in migration records the foundation tables, privileges/RLS, category
 Live verification also requires network access to the configured project hostname and appropriate test users. Preserve database enforcement: frontend route checks and date checks are usability defenses, not substitutes for RLS, transactional booking constraints or authorized RPCs.
 
 [Initial integration handoff](MILESTONE_3_HANDOFF.md) · [Verification contract and acceptance](VERIFICATION_TESTING.md) · [Release readiness](RELEASE_READINESS.md)
+
+[Communication and Trust handoff](COMMUNICATION_TRUST_HANDOFF.md) · [Staging and migration order](COMMUNICATION_TRUST_DEPLOYMENT.md)

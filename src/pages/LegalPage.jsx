@@ -21,6 +21,7 @@ const terms = {
       heading: 'Requests and handover',
       content: <>
         <p>A booking request goes to the owner for a decision. Check your booking status before making plans. Owners and renters can use their conversation to agree on the dates, total cost, pickup location, return arrangements and how to handle damage or delays.</p>
+        <p>A viewing lets participants arrange a time to inspect a rental. Confirm the viewing before sharing meeting arrangements. Viewings and rental bookings have separate decisions.</p>
         <p>At handover, both parties should check the item together and agree on its condition. Return it as agreed and communicate changes promptly. The parties arrange the physical exchange themselves. eRental provides no item inspection, transaction guarantee or insurance.</p>
       </>,
     },
@@ -40,6 +41,7 @@ const terms = {
       content: <>
         <p>Describe your own experience when reviewing a completed rental. Keep reviews and messages relevant and respectful. Impersonation, false listings, harassment, fraudulent requests and sharing someone else’s private documents are prohibited.</p>
         <p>If a listing appears misleading, prohibited or unsafe, sign in, open the listing and choose <strong>Report this listing</strong>. Give the reason without including identity documents or passwords. Authorized administrators review reports and may remove listings. The project team has yet to publish a general support contact.</p>
+        <p>You can block contact or report a conversation to an administrator. A block stops new contact between both accounts while either block is active. Previously agreed rentals and their records remain accessible. Owners can respond to reviews or dispute a policy violation. Moderators may hide a review after resolving a dispute.</p>
       </>,
     },
   ],
@@ -63,6 +65,7 @@ const privacy = {
       content: <>
         <p>The booking record links the renter, owner and listing with dates, status and rental details. Simulated payment and refund records describe activity on that booking. Booking participants can consult their history. The simulation does not collect payment-card details or transfer funds.</p>
         <p>Participants can read their conversation and see its read state. Listing reviews publish feedback about completed rentals. Listing reports and reasons go to authorized administrators for moderation. Keep sensitive personal information out of messages, reviews, photos and report descriptions.</p>
+        <p>Viewing schedules, private meeting details and their history are available to appointment participants. Blocks are private account controls. A conversation report may retain selected messages for authorized administrator review. The reporter can follow its decision. Review dispute details are restricted to the authorized case participants and moderators.</p>
       </>,
     },
     {
@@ -76,7 +79,7 @@ const privacy = {
     {
       id: 'notifications',
       heading: 'Account notifications',
-      content: <p>Confirmed marketplace events create private updates for their recipients. A notification records the type of activity, a reference to its booking, conversation or verification submission, and when the notice was created and read. Marking it read updates your notification list. Full messages and verification rejection reasons stay in their respective account pages.</p>,
+      content: <p>Confirmed marketplace events create private updates for their recipients. Notifications record the activity type, a reference to the underlying rental, appointment or account workflow, and when the notice was created and read. Private meeting information, full messages and moderation evidence stay in the authorized workflow.</p>,
     },
     {
       id: 'verification-documents',

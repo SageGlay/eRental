@@ -1,0 +1,14 @@
+# Communication and trust security
+
+The new data model extends the existing Supabase authorization. Signed-in roles read their own private records through RLS. Server-side actors come from `auth.uid()`. Administrator membership comes from the existing server probe and admin table. Prior notification and verification contracts remain authoritative.
+
+| Area | Boundary | Staging evidence required |
+| --- | --- | --- |
+| Message delivery | Authenticated participant reads, immutable identities and content, recipient read markers, and a single UUID per send intent. Database writes create the existing first-inquiry or message notice. | Two real sessions, participant-filtered socket delivery, denied cross-account reads, read markers after reconnect and no repeated notices. |
+| Blocks | Either direction closes new contact. Pair-row serialization orders message, conversation and viewing operations relative to blocks. Existing participants retain history and permitted ending actions. | Check original hosted trigger/lock ordering and legacy write paths. Confirm concurrent normal sends and block changes on staged identities. |
+| Viewings | Participant-only appointments and history. Owners are derived from listings. The GiST exclusion constraint and revision checks settle competing requests. Private details stay in appointments. | Confirm timezone, overlap, rescheduling and blocked-party behavior. Verify private details never appear in a notification. |
+| Reports | Reporter must participate in the conversation. Evidence membership is checked and capped. The administrator sees only selected evidence on the submitted case. | Audit active grants, denied unrelated access and competing admin decisions with selected synthetic messages. |
+| Ratings | Completed-booking eligibility and stable historical owner attribution. Public aggregates explicitly use published rows and normal RLS. Authorized resolution keeps disputed content while hiding it from public review and response queries. | Compare actual source review eligibility, test aggregate visibility changes and check moderator evidence stays scoped to the case. |
+| Notifications | Recipient-only reads, narrow read-state commands and internal writer. Entity IDs map to known application routes. | Confirm allowed types, preserved old reads and no unrelated access to recipient or evidence data. |
+
+Check event and moderation RPC grants at both role and PUBLIC levels. A fixed search path and a restricted role grant complement, rather than replace, the actor and resource checks in each command. The Realtime publication must preserve compatible existing consumers and exclude message DELETE delivery. Browser tests use a protocol fixture. Production rollout requires authorized hosted evidence. [Catalog diagnostic](supabase/diagnostics/communication_trust_contract.sql) · [Hosted checks](COMMUNICATION_TRUST_MANUAL_TESTING.md)

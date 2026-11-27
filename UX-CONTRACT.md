@@ -76,3 +76,10 @@ The handover-tag identity, responsive navigation and role-specific workspaces sh
 - Discovery uses a short list of eligible photographed rentals and actual owner names. Recent and saved categories influence the recommendations. Private account history is bounded and clearable. Guest viewing activity stays in the tab.
 - The bell opens `/notifications`. All and Unread are separate views of the same account records. Opening an unread item follows its approved app route after read status is confirmed. Conversation unread status follows the existing messaging workflow.
 - Public `/terms` and `/privacy` present drafts using the same theme and page structure. Registration, account settings, verification and the footer link to the relevant page. [Backlog acceptance](MARKETPLACE_ESSENTIALS_BACKLOG_TRACEABILITY.md)
+
+## Communication and marketplace trust
+
+- The thread reconciles with database history on subscription activity and reconnection. Quick responses populate an editable draft. Read markers reflect received messages in the visible thread and are independent of the notification center.
+- Blocks restrict messages, new conversations and new viewing requests while either direction is active. Previously authorized records and existing rental obligations remain available.
+- Viewings have their own incoming and outgoing queues, Manila schedule and audit history. A pending proposal reserves any earlier confirmed schedule until a decision.
+- Owner profiles show public data and published review averages. The public review cards show an authorized owner's response. Private dispute details and conversation report evidence stay within their case workflows. Administrator queues use explicit decisions and required reasons. [State and privacy rules](COMMUNICATION_TRUST_STATE_MACHINES.md)

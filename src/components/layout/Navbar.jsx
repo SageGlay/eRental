@@ -56,6 +56,14 @@ function AccountActions({ mobile = false }) {
         <Icon name="bookmark" />
         Saved listings
       </Link>
+      <Link to="/viewings">
+        <Icon name="calendar" />
+        Viewings
+      </Link>
+      <Link to="/review-disputes">
+        <Icon name="star" />
+        Review disputes
+      </Link>
       <Link to="/verification">
         <Icon name="shield" />
         Account verification
