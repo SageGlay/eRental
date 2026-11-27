@@ -6,6 +6,7 @@ import LoadError from '../components/LoadError.jsx'
 import VerifiedBadge from '../components/VerifiedBadge.jsx'
 import ThemeControl from '../components/ThemeControl.jsx'
 import PageHeading from '../components/PageHeading.jsx'
+import BlockedAccounts from '../components/BlockedAccounts.jsx'
 import Icon from '../components/Icon.jsx'
 import UnsavedChangesGuard from '../components/UnsavedChangesGuard.jsx'
 import '../styles/profile.css'
@@ -302,6 +303,7 @@ export default function ProfilePage() {
                 <p><Link to="/terms">Terms and conditions</Link> · <Link to="/privacy">Privacy notice</Link></p>
               </div>
             </div>
+            <BlockedAccounts key={user.id} userId={user.id} />
           </section>
         </div>
       </div>

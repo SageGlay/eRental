@@ -23,6 +23,11 @@ const BrowsePage = lazy(() => import('./pages/BrowsePage.jsx'))
 const SavedListingsPage = lazy(() => import('./pages/SavedListingsPage.jsx'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage.jsx'))
 const LegalPage = lazy(() => import('./pages/LegalPage.jsx'))
+const ViewingsPage = lazy(() => import('./pages/ViewingsPage.jsx'))
+const OwnerProfilePage = lazy(() => import('./pages/OwnerProfilePage.jsx'))
+const ReviewDisputesPage = lazy(() => import('./pages/ReviewDisputesPage.jsx'))
+const AdminConversationReportsPage = lazy(() => import('./pages/AdminConversationReportsPage.jsx'))
+const AdminReviewDisputesPage = lazy(() => import('./pages/AdminReviewDisputesPage.jsx'))
 const VerificationPage = lazy(() => import('./pages/VerificationPage.jsx'))
 const AdminVerificationPage = lazy(
   () => import('./pages/AdminVerificationPage.jsx'),
@@ -61,6 +66,11 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="saved" element={<RequireAuth><SavedListingsPage /></RequireAuth>} />
         <Route path="notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
+        <Route path="viewings" element={<RequireAuth><ViewingsPage /></RequireAuth>} />
+        <Route path="owners/:id" element={<OwnerProfilePage />} />
+        <Route path="review-disputes" element={<RequireAuth><ReviewDisputesPage /></RequireAuth>} />
+        <Route path="admin/conversation-reports" element={<RequireAdmin><AdminConversationReportsPage /></RequireAdmin>} />
+        <Route path="admin/review-disputes" element={<RequireAdmin><AdminReviewDisputesPage /></RequireAdmin>} />
         <Route path="terms" element={<LegalPage kind="terms" />} />
         <Route path="privacy" element={<LegalPage kind="privacy" />} />
         <Route path="listings" element={<BrowsePage />} />

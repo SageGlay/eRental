@@ -1,17 +1,41 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import Icon from '../components/Icon.jsx'
 import LoadError from '../components/LoadError.jsx'
+import RequestViewingButton from '../components/RequestViewingButton.jsx'
+import { ContactBlockDialog, ConversationReportDialog, ConversationReportHistory, useOwnConversationReports } from '../components/ConversationSafety.jsx'
+import { useConversationContact, useConversationThread } from '../hooks/useConversationThread.js'
+import { announceMessageActivity } from '../hooks/useMessageRealtime.js'
 import '../styles/conversation.css'
 
 const META =
-  'id, renter_id, listings(id, title), renter:profiles!conversations_renter_id_fkey(display_name), owner:profiles!conversations_owner_id_fkey(display_name)'
+  'id, renter_id, owner_id, listings(id, title), renter:profiles!conversations_renter_id_fkey(display_name), owner:profiles!conversations_owner_id_fkey(display_name)'
 
 const dayLabel = new Intl.DateTimeFormat('en-PH', { dateStyle: 'long' })
 const timeLabel = new Intl.DateTimeFormat('en-PH', { timeStyle: 'short' })
+const quickResponses = {
+  renter: [
+    'Is this still available?',
+    'Can I arrange a viewing?',
+    'What are the rental requirements?',
+    'Thank you for the information.',
+  ],
+  owner: [
+    'Yes, this rental is available.',
+    'Please let me know your preferred dates.',
+    'We can arrange a viewing.',
+    'Thank you for your inquiry.',
+  ],
+}
+const syncLabels = {
+  connected: 'Live updates connected',
+  connecting: 'Connecting live updates…',
+  reconnecting: 'Reconnecting · Automatic checks continue',
+  offline: 'Offline · Reconnect to send',
+}
 
 export default function ConversationPage() {
   const { id } = useParams()
@@ -25,67 +49,29 @@ function Conversation({ id, user }) {
   const [conv, setConv] = useState(undefined) // undefined = loading, null = not found
   const [conversationError, setConversationError] = useState('')
   const [revision, setRevision] = useState(0)
-  const [messages, setMessages] = useState(null)
-  const [messagesError, setMessagesError] = useState('')
   const [body, setBody] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [needsRefresh, setNeedsRefresh] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [dialog, setDialog] = useState(null)
+  const [safetyFeedback, setSafetyFeedback] = useState('')
   const listRef = useRef(null)
   const followLatest = useRef(true)
   const composerRef = useRef(null)
   const headingRef = useRef(null)
   const refreshRef = useRef(null)
   const sendingRef = useRef(null)
-  const readingRef = useRef(null)
+  const sendOperation = useRef(null)
   const uncertainSend = useRef(null)
   const refreshInFlight = useRef(false)
 
-  const loadMessages = useCallback(
-    async (replacePending = false) => {
-      if (readingRef.current && !replacePending) return null
-      readingRef.current?.abort()
-      const controller = new AbortController()
-      readingRef.current = controller
-      const timeout = setTimeout(() => controller.abort(), 15_000)
-      try {
-        const { data, error: loadError } = await supabase
-          .from('messages')
-          .select('id, sender_id, body, created_at, read_at')
-          .eq('conversation_id', id)
-          .order('created_at')
-          .abortSignal(controller.signal)
-        if (loadError) throw loadError
-        if (readingRef.current !== controller) return null
-        const rows = data ?? []
-        setMessages(rows)
-        setMessagesError('')
-        if ((data ?? []).some((m) => m.sender_id !== user.id && !m.read_at)) {
-          await supabase
-            .from('messages')
-            .update({ read_at: new Date().toISOString() })
-            .eq('conversation_id', id)
-            .neq('sender_id', user.id)
-            .is('read_at', null)
-            .abortSignal(controller.signal)
-        }
-        return readingRef.current === controller ? rows : null
-      } catch {
-        if (readingRef.current === controller) {
-          setMessagesError(
-            'We couldn’t load your messages. Check your connection and try again.',
-          )
-        }
-        return null
-      } finally {
-        clearTimeout(timeout)
-        if (readingRef.current === controller) readingRef.current = null
-      }
-    },
-    [id, user.id],
-  )
+  const { messages, messageError, unreadStart, unseen, setUnseen, loadMessages, connection } =
+    useConversationThread(conv?.id, user.id, followLatest)
+  const { contact, contactError, refreshContact } = useConversationContact(conv?.id)
+  const reports = useOwnConversationReports(conv?.id, user.id)
+  const readyToSend = contact?.contact_allowed === true && connection !== 'offline'
 
   useEffect(() => {
     const controller = new AbortController()
@@ -118,18 +104,10 @@ function Conversation({ id, user }) {
     }
   }, [id, revision])
 
-  useEffect(() => {
-    if (!conv) return
-    loadMessages()
-    const timer = setInterval(loadMessages, 8000)
-    return () => {
-      clearInterval(timer)
-      readingRef.current?.abort()
-      readingRef.current = null
-      sendingRef.current?.abort()
-      sendingRef.current = null
-    }
-  }, [conv, loadMessages])
+  useEffect(() => () => {
+    sendingRef.current?.abort()
+    sendingRef.current = null
+  }, [])
 
   const messageCount = messages?.length
   useEffect(() => {
@@ -147,7 +125,7 @@ function Conversation({ id, user }) {
 
   async function handleSend(e) {
     e.preventDefault()
-    if (sendingRef.current || needsRefresh || !messages) return
+    if (sendingRef.current || needsRefresh || !messages || !readyToSend) return
     const text = body.trim()
     if (!text) return composerRef.current?.focus()
     if (text.length > 2000) {
@@ -161,29 +139,33 @@ function Conversation({ id, user }) {
     setBusy(true)
     setFeedback('')
     setError('')
+    const operation = sendOperation.current?.text === text
+      ? sendOperation.current : { id: crypto.randomUUID(), text }
+    sendOperation.current = operation
     try {
-      const { error: sendError, status } = await supabase
-        .from('messages')
-        .insert({ conversation_id: id, sender_id: user.id, body: text })
+      const { data, error: sendError, status } = await supabase
+        .rpc('send_conversation_message', {
+          p_conversation_id: id, p_operation_id: operation.id, p_body: text,
+        })
         .abortSignal(controller.signal)
       if (sendingRef.current !== controller) return
       if (sendError) {
         if (!status || status === 408 || status >= 500) throw sendError
-        return setError('We couldn’t send your message. Try again.')
+        void refreshContact()
+        return setError('We couldn’t send your message. Check that messaging is available and try again.')
       }
+      if (data !== operation.id) throw new Error('Send was not confirmed')
+      sendOperation.current = null
+      uncertainSend.current = null
       setBody('')
       followLatest.current = true
+      setUnseen(false)
       setFeedback('Message sent.')
-      // A read that began before the insert cannot confirm the new message.
-      readingRef.current?.abort()
-      readingRef.current = null
-      loadMessages()
+      announceMessageActivity()
+      void loadMessages(true)
     } catch {
       if (sendingRef.current === controller) {
-        uncertainSend.current = {
-          text,
-          ids: new Set(messages.map(({ id }) => id)),
-        }
+        uncertainSend.current = operation
         setNeedsRefresh(true)
         setError(
           'We couldn’t confirm your message was sent. Refresh messages to check before sending it again.',
@@ -204,16 +186,15 @@ function Conversation({ id, user }) {
     setRefreshing(true)
     const attempt = uncertainSend.current
     try {
+      void refreshContact()
       const rows = await loadMessages(true)
       if (!rows || !attempt || uncertainSend.current !== attempt) return
-      const matchingMessage = rows.some(
-        (message) =>
-          message.sender_id === user.id &&
-          message.body === attempt.text &&
-          !attempt.ids.has(message.id),
+      const matchingMessage = rows.some((message) =>
+        message.id === attempt.id && message.sender_id === user.id,
       )
       if (matchingMessage) {
         setBody('')
+        sendOperation.current = null
         setFeedback('A matching message is already in this conversation.')
       }
       uncertainSend.current = null
@@ -272,8 +253,9 @@ function Conversation({ id, user }) {
     )
   }
 
+  const isRenter = conv.renter_id === user.id
   const other =
-    conv.renter_id === user.id
+    isRenter
       ? conv.owner?.display_name
       : conv.renter?.display_name
   const name = other?.trim() || 'Marketplace member'
@@ -301,21 +283,39 @@ function Conversation({ id, user }) {
               <h1 ref={headingRef} tabIndex={-1}>
                 {name}
               </h1>
-              <p>{conv.renter_id === user.id ? 'Listing owner' : 'Renter'}</p>
+              <p>{isRenter ? 'Listing owner' : 'Renter'}</p>
             </div>
-            <button
-              type="button"
-              className="btn"
-              ref={refreshRef}
-              disabled={refreshing}
-              aria-busy={refreshing}
-              onClick={refreshMessages}
-            >
-              <Icon name="refresh" size={18} />
-              <span>
-                {refreshing ? 'Refreshing messages…' : 'Refresh messages'}
-              </span>
-            </button>
+            <div className="conversation-actions">
+              <button
+                type="button"
+                className="btn"
+                ref={refreshRef}
+                disabled={refreshing}
+                aria-busy={refreshing}
+                onClick={refreshMessages}
+              >
+                <Icon name="refresh" size={18} />
+                <span>
+                  {refreshing ? 'Refreshing messages…' : 'Refresh messages'}
+                </span>
+              </button>
+              <details className="conversation-action-menu">
+                <summary className="btn" aria-label="Conversation actions"><Icon name="sliders" size={19} /></summary>
+                <div className="conversation-action-menu__panel">
+                  {readyToSend && conv.listings?.id && conv.owner_id && (
+                    <RequestViewingButton listingId={conv.listings.id} ownerId={conv.owner_id} />
+                  )}
+                  {contact?.counterpart_id && (
+                    <button type="button" className="btn btn-ghost" onClick={() => { setSafetyFeedback(''); setDialog('block') }}>
+                      {contact.blocked_by_me ? 'Unblock account' : 'Block account'}
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-ghost" onClick={() => { setSafetyFeedback(''); setDialog('report') }}>
+                    Report conversation
+                  </button>
+                </div>
+              </details>
+            </div>
           </header>
           <aside className="conversation-context" aria-label="Rental context">
             <Icon name="box" size={20} />
@@ -329,30 +329,35 @@ function Conversation({ id, user }) {
               </Link>
             )}
           </aside>
-          {messagesError && (
+          {messageError && (
             <LoadError onRetry={refreshMessages} retrying={refreshing}>
-              {messagesError}
+              {messageError}
             </LoadError>
           )}
+          {safetyFeedback && <p className="form-success conversation-notice" role="status">{safetyFeedback}</p>}
           <ul
             ref={listRef}
             className="conversation-messages"
             tabIndex={0}
             onScroll={(event) => {
               const list = event.currentTarget
-              followLatest.current =
-                list.scrollHeight - list.clientHeight - list.scrollTop < 32
+              const nearLatest = list.scrollHeight - list.clientHeight - list.scrollTop < 32
+              if (nearLatest && !followLatest.current) {
+                setUnseen(false)
+                void loadMessages()
+              }
+              followLatest.current = nearLatest
             }}
             aria-label="Conversation messages"
             aria-live="polite"
             aria-relevant="additions text"
           >
-            {messages === null && !messagesError && (
+            {messages === null && !messageError && (
               <li role="status" className="conversation-empty">
                 Loading messages…
               </li>
             )}
-            {messages?.length === 0 && !messagesError && (
+            {messages?.length === 0 && !messageError && (
               <li className="conversation-empty">
                 <Icon name="message" size={36} />
                 <h2>Start with a hello</h2>
@@ -377,6 +382,7 @@ function Conversation({ id, user }) {
                       <time dateTime={m.created_at}>{day}</time>
                     </li>
                   )}
+                  {m.id === unreadStart && <li className="conversation-date">Unread messages</li>}
                   <li
                     className={`conversation-bubble${mine ? ' bubble--mine' : ''}`}
                   >
@@ -404,13 +410,48 @@ function Conversation({ id, user }) {
               )
             })}
           </ul>
+          {unseen && (
+            <button type="button" className="btn btn-ghost conversation-jump" onClick={() => {
+              followLatest.current = true
+              listRef.current.scrollTop = listRef.current.scrollHeight
+              listRef.current.focus()
+              setUnseen(false)
+              void loadMessages()
+            }}>Go to new messages</button>
+          )}
           <form
             className="conversation-composer"
             onSubmit={handleSend}
             noValidate
             aria-busy={busy}
           >
-            <label htmlFor="body">Your message</label>
+            <div className="conversation-compose-heading">
+              <label htmlFor="body">Your message</label>
+              {readyToSend && (
+                <details className="conversation-quick-responses">
+                  <summary className="btn btn-ghost">Quick responses</summary>
+                  <ul>
+                    {quickResponses[isRenter ? 'renter' : 'owner'].map((response) => (
+                      <li key={response}>
+                        <button type="button" className="btn btn-ghost" disabled={busy || needsRefresh || !readyToSend}
+                          onClick={(event) => {
+                            setBody((draft) => draft.trim() ? (draft.trimEnd() + ' ' + response).slice(0, 2000) : response)
+                            setFeedback('')
+                            event.currentTarget.closest('details').open = false
+                            composerRef.current?.focus()
+                          }}
+                        >{response}</button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+            {contactError ? (
+              <p className="field__hint">Couldn’t check messaging availability. Refresh messages to try again.</p>
+            ) : contact?.contact_allowed === false && (
+              <p className="field__hint">Messaging is restricted for this conversation. Your history and existing rental activity are still available.</p>
+            )}
             <textarea
               ref={composerRef}
               id="body"
@@ -419,7 +460,7 @@ function Conversation({ id, user }) {
               maxLength={2000}
               placeholder="Write a message…"
               value={body}
-              disabled={busy || needsRefresh}
+              disabled={busy || needsRefresh || !readyToSend}
               aria-describedby={`message-help${error ? ' message-error' : ''}`}
               onChange={(e) => {
                 setBody(e.target.value)
@@ -445,7 +486,7 @@ function Conversation({ id, user }) {
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={busy || needsRefresh || !messages || !body.trim()}
+                disabled={busy || needsRefresh || !readyToSend || !messages || !body.trim()}
               >
                 <Icon name="arrowRight" size={18} />
                 {busy ? 'Sending…' : 'Send'}
@@ -453,10 +494,29 @@ function Conversation({ id, user }) {
             </div>
           </form>
         </div>
-        <p className="conversation-sync">
+        <p className="conversation-sync" aria-live="polite">
           <Icon name="clock" size={16} />
-          Checks for new messages every 8 seconds.
+          {messageError && connection !== 'offline' ? 'Synchronization paused · Try refreshing messages' : syncLabels[connection]}
         </p>
+        <ConversationReportHistory reports={reports} />
+        {dialog === 'block' && contact?.counterpart_id && (
+          <ContactBlockDialog userId={contact.counterpart_id} blocked={contact.blocked_by_me}
+            onRefresh={refreshContact} onClose={() => setDialog(null)}
+            onSaved={(message) => {
+              setDialog(null)
+              setSafetyFeedback(message)
+              void refreshContact(true)
+            }} />
+        )}
+        {dialog === 'report' && (
+          <ConversationReportDialog conversationId={id} messages={messages ?? []} userId={user.id}
+            onClose={() => { setDialog(null); void reports.refresh() }}
+            onSubmitted={(message) => {
+              setDialog(null)
+              setSafetyFeedback(message)
+              void reports.refresh()
+            }} />
+        )}
       </div>
     </section>
   )

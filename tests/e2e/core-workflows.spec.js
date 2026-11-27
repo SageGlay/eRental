@@ -229,17 +229,18 @@ test('existing conversation loads, sends text and marks received messages read',
         ])
         return true
       }
+      if (url.pathname === '/rest/v1/rpc/send_conversation_message' && method === 'POST') {
+        rows.push({
+          id: body.p_operation_id,
+          sender_id: USER_ID,
+          body: body.p_body,
+          created_at: '2026-11-01T01:00:00Z',
+          read_at: null,
+        })
+        await json(route, body.p_operation_id)
+        return true
+      }
       if (url.pathname === '/rest/v1/messages') {
-        if (method === 'POST') {
-          rows.push({
-            id: 'sample-reply',
-            ...body,
-            created_at: '2026-11-01T01:00:00Z',
-            read_at: null,
-          })
-          await json(route, null, 201)
-          return true
-        }
         if (method === 'PATCH') {
           rows[0].read_at = body.read_at
           await json(route, null)
@@ -264,10 +265,12 @@ test('existing conversation loads, sends text and marks received messages read',
   await expect(
     page.getByText('Thank you. I will send a request.', { exact: false }),
   ).toBeVisible()
-  expect(calls(model, '/rest/v1/messages', 'POST')[0].body).toMatchObject({
-    conversation_id: CONVERSATION_ID,
-    sender_id: USER_ID,
+  expect(calls(model, '/rest/v1/rpc/send_conversation_message', 'POST')[0].body).toEqual({
+    p_conversation_id: CONVERSATION_ID,
+    p_body: 'Thank you. I will send a request.',
+    p_operation_id: expect.stringMatching(/^[a-f0-9-]{36}$/),
   })
+  expect(calls(model, '/rest/v1/messages', 'POST')).toHaveLength(0)
   expect(calls(model, '/rest/v1/messages', 'PATCH').length).toBeGreaterThan(0)
 })
 

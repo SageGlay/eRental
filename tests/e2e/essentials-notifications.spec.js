@@ -13,6 +13,26 @@ const row = (i, type, fields = {}) => ({
   ...fields,
 })
 
+test('viewing and moderation notices use the existing recipient center and known internal destinations', async ({ page }) => {
+  await fixture(page, [
+    row(1, 'viewing_requested', { recipient_role: 'owner' }),
+    row(2, 'viewing_reschedule_proposed'),
+    row(3, 'conversation_report_resolved', { recipient_role: 'reporter' }),
+    row(4, 'review_dispute_resolved', { recipient_role: 'owner' }),
+    row(5, 'review_response_published'),
+    row(6, 'review_published', { recipient_role: 'owner', entity_id: 'https://example.test/' }),
+    row(7, 'viewing_completed', { recipient_id: OWNER_ID }),
+  ])
+  await page.goto('/notifications')
+  await expect(page.getByRole('link', { name: 'New viewing request' })).toHaveAttribute('href', '/viewings?tab=incoming#viewing-' + entityId)
+  await expect(page.getByRole('link', { name: 'New viewing time proposed' })).toHaveAttribute('href', '/viewings#viewing-' + entityId)
+  await expect(page.getByRole('link', { name: 'Conversation report resolved' })).toHaveAttribute('href', '/messages/' + entityId + '#conversation-reports')
+  await expect(page.getByRole('link', { name: 'Review dispute resolved' })).toHaveAttribute('href', '/review-disputes#dispute-' + entityId)
+  await expect(page.getByRole('link', { name: 'Owner responded to your review' })).toHaveAttribute('href', '/listings/' + entityId + '#rental-reviews')
+  await expect(page.getByRole('link', { name: 'New rental review' })).toHaveCount(0)
+  await expect(page.getByText('Viewing completed', { exact: true })).toHaveCount(0)
+})
+
 async function fixture(page, rows, options) {
   const state = { rows, failWrite: false, failList: false, failCount: false }
   const model = await mockMarketplace(page, async (route, { url, method, body }) => {

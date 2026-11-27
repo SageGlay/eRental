@@ -19,7 +19,7 @@ export function sessionFor(userId = USER_ID) {
   return { access_token: token, refresh_token: 'fixture-refresh', expires_at: exp, expires_in: 3600, token_type: 'bearer', user }
 }
 
-export async function mockMarketplace(page, override = async () => false, { signedIn = true } = {}) {
+export async function mockMarketplace(page, override = async () => false, { signedIn = true, realtime = false } = {}) {
   const model = { listing: structuredClone(listing), listings: new Map(), photos: [], calls: [] }
   if (signedIn) {
     await page.addInitScript(({ session }) => {
@@ -28,6 +28,7 @@ export async function mockMarketplace(page, override = async () => false, { sign
       localStorage.setItem('sb-test-project-auth-token', JSON.stringify(session))
     }, { session: sessionFor() })
   }
+  if (!realtime) await page.routeWebSocket('wss://test-project.supabase.co/**', (socket) => socket.close({ code: 1008 }))
   await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ body: '', contentType: 'text/css' }))
   await page.route('https://test-project.supabase.co/**', async (route) => {
     const request = route.request()
@@ -40,6 +41,10 @@ export async function mockMarketplace(page, override = async () => false, { sign
     if (method === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
     if (url.pathname === '/auth/v1/logout') return json(route, {})
     if (url.pathname === '/rest/v1/rpc/is_admin') return json(route, false)
+    if (url.pathname === '/rest/v1/rpc/public_review_summary') return json(route, { count: 0, average: null })
+    if (url.pathname === '/rest/v1/rpc/conversation_contact_status') return json(route, { contact_allowed: true, blocked_by_me: false, counterpart_id: OWNER_ID })
+    if (['/rest/v1/user_blocks', '/rest/v1/conversation_reports'].includes(url.pathname) && method === 'GET') return json(route, [])
+
     if (url.pathname === '/rest/v1/saved_listings' && method === 'GET') return json(route, [])
     if (url.pathname === '/rest/v1/recently_viewed_listings' && ['GET', 'DELETE'].includes(method)) return json(route, [])
     if (url.pathname === '/rest/v1/rpc/record_listing_view' && method === 'POST') return json(route, null)

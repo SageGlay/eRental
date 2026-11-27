@@ -23,6 +23,8 @@ export default function Layout() {
       '/list': 'Create listing',
       '/bookings': 'Bookings',
       '/messages': 'Messages',
+      '/viewings': 'Viewings',
+      '/review-disputes': 'Review disputes',
       '/saved': 'Saved listings',
       '/notifications': 'Notifications',
       '/terms': 'Terms and conditions',
@@ -36,6 +38,8 @@ export default function Layout() {
       '/verification': 'Account verification',
       '/admin': 'Listing reports',
       '/admin/verification': 'Verification review',
+      '/admin/conversation-reports': 'Conversation reports',
+      '/admin/review-disputes': 'Review dispute moderation',
     }
     const title =
       titles[pathname] ||
@@ -45,7 +49,9 @@ export default function Layout() {
           : 'Rental details'
         : pathname.startsWith('/messages/')
           ? 'Conversation'
-          : 'Page not found')
+          : pathname.startsWith('/owners/')
+            ? 'Rental owner'
+            : 'Page not found')
     document.title = `${title} · eRental`
   }, [pathname])
 

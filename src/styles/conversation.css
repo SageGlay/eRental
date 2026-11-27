@@ -5,6 +5,7 @@
 .conversation-thread { background: var(--surface-elevated); border: 1px solid var(--border); border-radius: var(--r-md); }
 .conversation-heading { display: grid; align-items: center; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--s3); padding: var(--s4); }
 .conversation-person h1 { font-size: clamp(1.375rem, 2.6vw, 2rem); margin: 0; }
+.conversation-person { overflow-wrap: anywhere; }
 .conversation-person p { color: var(--muted); font-size: .875rem; margin: 0; }
 .conversation-avatar { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: var(--primary); background: var(--primary-soft); font: 700 1.125rem/1 var(--font-display); }
 .conversation-context { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); color: var(--text); background: var(--surface); border-block: 1px solid var(--border); }
@@ -32,6 +33,30 @@
 .conversation-feedback { color: var(--muted); font-size: .8125rem; }
 .conversation-feedback:empty { display: none; }
 .conversation-sync { display: flex; gap: var(--s2); align-items: center; margin: var(--s3) 0 0; color: var(--muted); font-size: .8125rem; }
+.conversation-actions, .conversation-compose-heading { display: flex; align-items: center; gap: var(--s2); }
+.conversation-compose-heading { justify-content: space-between; }
+.conversation-action-menu, .conversation-quick-responses { position: relative; }
+.conversation-action-menu summary, .conversation-quick-responses summary { min-width: 44px; min-height: 44px; list-style: none; cursor: pointer; }
+.conversation-action-menu summary::-webkit-details-marker, .conversation-quick-responses summary::-webkit-details-marker { display: none; }
+.conversation-action-menu__panel, .conversation-quick-responses ul {
+  position: absolute; z-index: 10; inset-inline-end: 0; inset-block-start: calc(100% + var(--s1));
+  width: min(19rem, calc(100vw - 3rem)); padding: var(--s2); margin: 0;
+  display: grid; gap: var(--s1); border-radius: var(--r-sm); border: 1px solid var(--input-border);
+  background: var(--surface-elevated); box-shadow: var(--shadow);
+}
+.conversation-quick-responses ul { inset-block-start: auto; inset-block-end: calc(100% + var(--s1)); }
+.conversation-action-menu__panel .btn, .conversation-quick-responses li .btn { width: 100%; justify-content: flex-start; text-align: start; white-space: normal; }
+.conversation-jump { margin: var(--s2) var(--s4); }
+.conversation-notice { margin-inline: var(--s4); }
+.conversation-report-history { margin-top: var(--s5); }
+.conversation-report-history li { padding-block: var(--s3); border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.conversation-report-history p { margin-block-end: 0; }
+.conversation-report-form { display: grid; gap: var(--s3); }
+.conversation-report-form textarea { width: 100%; }
+.conversation-report-form p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.conversation-report-evidence { min-width: 0; border: 1px solid var(--border); padding: var(--s3); }
+.conversation-report-evidence label { display: flex; align-items: center; gap: var(--s2); min-height: 44px; overflow-wrap: anywhere; }
+.conversation-report-evidence label input { flex-shrink: 0; }
 @media (min-width: 640px) {
   .conversation-heading, .conversation-messages, .conversation-composer { padding: var(--s5); }
   .conversation-context { padding-inline: var(--s5); }
@@ -40,6 +65,7 @@
   .conversation-page { padding-block-start: var(--s3); }
   .conversation-heading .btn { min-width: 44px; min-height: 44px; padding: var(--s2); }
   .conversation-heading .btn span { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+  .conversation-action-menu__panel .btn span { position: static; width: auto; height: auto; clip-path: none; white-space: normal; }
   .conversation-messages { min-height: 120px; height: clamp(8rem, calc(100dvh - var(--nav-h) - var(--dock-h) - 26rem), 24rem); }
   .conversation-context { flex-wrap: wrap; gap: var(--s1) var(--s2); }
   .conversation-context a { margin-left: 0; }

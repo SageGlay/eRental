@@ -17,6 +17,14 @@ export default function AdminNavigation() {
           <Icon name="user" size={18} />
           Account verification
         </NavLink>
+        <NavLink to="/admin/conversation-reports">
+          <Icon name="message" size={18} />
+          Conversation reports
+        </NavLink>
+        <NavLink to="/admin/review-disputes">
+          <Icon name="star" size={18} />
+          Review disputes
+        </NavLink>
       </div>
     </nav>
   )
