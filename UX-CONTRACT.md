@@ -69,3 +69,10 @@ The handover-tag identity, responsive navigation and role-specific workspaces sh
 - Canonical CRUD evidence remains the existing reliability/core/verification tests; `tests/e2e/redesign.spec.js` adds theme, responsive and shared-control checks. Browser fixture tests never establish live RLS or production readiness.
 
 - Inbox filters and thread search operate on the signed-in user's loaded conversations. Booking dates from PostgreSQL DATE remain calendar dates across time zones. An uncertain moderation decision requires a fresh queue read before another decision. Reports and verification confirmations identify the subject.
+
+## Marketplace essentials
+
+- Saved rentals use an account menu entry and a separate bookmark button on listing cards and details. A signed-out bookmark action can return to the listing after login. Pending and unconfirmed requests retain a recovery path, and inaccessible listings show no restricted catalogue details.
+- Discovery uses a short list of eligible photographed rentals and actual owner names. Recent and saved categories influence the recommendations. Private account history is bounded and clearable. Guest viewing activity stays in the tab.
+- The bell opens `/notifications`. All and Unread are separate views of the same account records. Opening an unread item follows its approved app route after read status is confirmed. Conversation unread status follows the existing messaging workflow.
+- Public `/terms` and `/privacy` present drafts using the same theme and page structure. Registration, account settings, verification and the footer link to the relevant page. [Backlog acceptance](MARKETPLACE_ESSENTIALS_BACKLOG_TRACEABILITY.md)
