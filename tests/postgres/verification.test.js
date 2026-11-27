@@ -1,159 +1,18 @@
 import assert from 'node:assert/strict'
-import { execFile, spawn } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
-import { readFileSync } from 'node:fs'
 import { after, before, test } from 'node:test'
-import { setTimeout as delay } from 'node:timers/promises'
-import { promisify } from 'node:util'
+import { asUser, disposableDatabase, literal, read, uuid } from './helpers/disposable-database.js'
+import {
+  fixtureSchema, installOriginalReview, migration, original, rollback, snapshot,
+} from './helpers/verification-schema.js'
 
-// This harness can address only its own temporary container's Unix socket.
-// It has no inputs for hosted project URLs, connection strings or API keys.
-const docker = (args, options) =>
-  promisify(execFile)('docker', args, {
-    timeout: 30_000,
-    ...options,
-  })
-const read = (path) =>
-  readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8')
-const snapshot = JSON.parse(read('supabase/contracts/verification.json'))
-const migrationFile = '20261119184647_harden_verification_review.sql'
-const migration = read(`supabase/migrations/${migrationFile}`)
-const rollback = read(`supabase/rollbacks/${migrationFile}`)
-const original = snapshot.functions.find(
-  ({ name }) => name === 'review_verification',
-)
-const database = 'erental_verification_fixture'
-const psql = [
-  'psql',
-  '-X',
-  '-qAt',
-  '-v',
-  'ON_ERROR_STOP=1',
-  '-h',
-  '/var/run/postgresql',
-  '-U',
-  'postgres',
-  '-d',
-  database,
-]
-const fixtureRoles = ['anon', 'authenticated', 'service_role']
-const quote = (value) => '"' + value.replaceAll('"', '""') + '"'
-const literal = (value) =>
-  value === null ? 'null' : "'" + value.replaceAll("'", "''") + "'"
-const table = (schema, name) => `${quote(schema)}.${quote(name)}`
-const uuid = (number) =>
-  `00000000-0000-4000-8000-${String(number).padStart(12, '0')}`
+const { query, race, start, stop, withHeldTransaction } = disposableDatabase('erental_verification_fixture')
 const adminA = uuid(1)
 const adminB = uuid(2)
 const stranger = uuid(3)
 const applicant = (number) => uuid(10 + number)
 const submission = (number) => uuid(20 + number)
-let container
 let originalAttributes
 
-async function query(sql) {
-  const { stdout } = await docker(['exec', container, ...psql, '-c', sql], {
-    timeout: 20_000,
-  })
-  return stdout.trim()
-}
-
-async function until(check, description, milliseconds = 8000) {
-  const deadline = Date.now() + milliseconds
-  while (Date.now() < deadline) {
-    if (await check()) return
-    await delay(50)
-  }
-  assert.fail(description)
-}
-
-function fixtureSchema() {
-  // Read the application schema and role rules from the recorded export.
-  // auth.uid() and storage.foldername() are local fixture adapters.
-  const columnsFor = ({ schema, name }) =>
-    snapshot.columns
-      .filter(
-        (column) =>
-          column.table_schema === schema && column.table_name === name,
-      )
-      .map(({ column_name, data_type, column_default, is_nullable }) =>
-        [
-          quote(column_name),
-          data_type,
-          column_default && `DEFAULT ${column_default}`,
-          is_nullable === 'NO' && 'NOT NULL',
-        ]
-          .filter(Boolean)
-          .join(' '),
-      )
-
-  return [
-    ...fixtureRoles.map((role) => `CREATE ROLE ${role} NOLOGIN`),
-    'CREATE SCHEMA auth',
-    'CREATE SCHEMA storage',
-    'GRANT USAGE ON SCHEMA auth, storage TO anon, authenticated, service_role',
-    'CREATE TABLE auth.users (id uuid PRIMARY KEY)',
-    "CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$",
-    'CREATE TABLE public.admin_users (user_id uuid PRIMARY KEY REFERENCES auth.users(id))',
-    'ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY',
-    'CREATE TABLE storage.objects (bucket_id text NOT NULL, name text NOT NULL)',
-    'CREATE TABLE storage.buckets (id text PRIMARY KEY, public boolean, file_size_limit bigint, allowed_mime_types text[])',
-    "CREATE FUNCTION storage.foldername(name text) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$ SELECT (string_to_array(name, '/'))[1:cardinality(string_to_array(name, '/')) - 1] $$",
-    'ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY',
-    'ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY',
-    ...snapshot.tables.map(
-      (relation) =>
-        `CREATE TABLE ${table(relation.schema, relation.name)} (${columnsFor(relation).join(', ')})`,
-    ),
-    ...snapshot.constraints.map(
-      ({ name, table: relation, definition }) =>
-        `ALTER TABLE ${table('public', relation)} ADD CONSTRAINT ${quote(name)} ${definition}`,
-    ),
-    ...snapshot.tables
-      .filter(({ rls_enabled }) => rls_enabled)
-      .map(
-        ({ schema, name }) =>
-          `ALTER TABLE ${table(schema, name)} ENABLE ROW LEVEL SECURITY`,
-      ),
-    ...snapshot.indexes
-      .filter(
-        ({ indexname }) =>
-          !snapshot.constraints.some(({ name }) => name === indexname),
-      )
-      .map(({ indexdef }) => indexdef),
-    ...snapshot.functions
-      .filter(({ name }) => name !== original.name)
-      .map(({ definition }) => definition),
-    'REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC',
-    'GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, service_role',
-    ...snapshot.triggers.map(({ function: definition }) => definition),
-    ...snapshot.triggers.map(({ definition }) => definition),
-    ...snapshot.table_grants
-      .filter(({ grantee }) => fixtureRoles.includes(grantee))
-      .map(
-        ({ table_schema, table_name, grantee, privilege_type }) =>
-          `GRANT ${privilege_type} ON ${table(table_schema, table_name)} TO ${quote(grantee)}`,
-      ),
-    ...snapshot.column_grants
-      .filter(
-        ({ grantee, privilege_type, table_schema }) =>
-          fixtureRoles.includes(grantee) &&
-          privilege_type !== 'SELECT' &&
-          table_schema === 'public',
-      )
-      .map(
-        ({ table_schema, table_name, grantee, privilege_type, column_name }) =>
-          `GRANT ${privilege_type} (${quote(column_name)}) ON ${table(table_schema, table_name)} TO ${quote(grantee)}`,
-      ),
-    ...snapshot.policies.map(
-      ({ policyname, schemaname, tablename, cmd, roles, qual, with_check }) =>
-        `CREATE POLICY ${quote(policyname)} ON ${table(schemaname, tablename)} FOR ${cmd} TO ${roles.map(quote).join(', ')}${qual ? ` USING (${qual})` : ''}${with_check ? ` WITH CHECK (${with_check})` : ''}`,
-    ),
-  ].join(';\n')
-}
-
-const asUser = (id, sql, role = 'authenticated') =>
-  `SET ROLE ${role}; SET request.jwt.claim.sub = ${literal(id || '')}; ${sql};`
 const review = (number, action, note = null) =>
   `SELECT public.review_verification('${submission(number)}', ${literal(action)}, ${literal(note)})`
 const profileEdit = (number, changes) =>
@@ -178,117 +37,11 @@ async function state(number) {
   )
 }
 
-async function withHeldTransaction(firstSql, run) {
-  const first = spawn('docker', ['exec', '-i', container, ...psql], {
-    stdio: 'pipe',
-  })
-  let output = ''
-  let errors = ''
-  const exit = new Promise((resolve, reject) => {
-    first.once('error', reject)
-    first.once('close', resolve)
-  })
-  first.stdout.on('data', (chunk) => {
-    output += chunk.toString()
-  })
-  first.stderr.on('data', (chunk) => {
-    errors += chunk.toString()
-  })
-  first.stdin.on('error', () => {}) // A terminated child closes the input pipe.
-  first.stdin.write(
-    `SET application_name = 'erental_first'; BEGIN; ${firstSql}\n\\echo first-ready\n`,
-  )
-  try {
-    await until(
-      () => output.includes('first-ready'),
-      'First transaction did not reach its held lock',
-    )
-    return await run(async (command = 'COMMIT') => {
-      first.stdin.end(command + ';\n')
-      assert.equal(await exit, 0, errors)
-    })
-  } finally {
-    if (!first.stdin.destroyed && !first.stdin.writableEnded)
-      first.stdin.end('ROLLBACK;\n')
-    await exit
-  }
-}
-
-async function race(firstSql, secondSql, { commitFirst = true } = {}) {
-  return withHeldTransaction(firstSql, async (release) => {
-    const second = query(
-      `SET application_name = 'erental_second'; SET lock_timeout = '12s'; ${secondSql}`,
-    ).then(
-      () => null,
-      (error) => error,
-    )
-    await until(
-      async () =>
-        (await query(`
-      SELECT EXISTS (
-        SELECT FROM pg_stat_activity contender
-        JOIN pg_stat_activity holder ON holder.pid = ANY(pg_blocking_pids(contender.pid))
-        WHERE contender.application_name = 'erental_second'
-          AND holder.application_name = 'erental_first'
-      )`)) === 't',
-      'Second transaction did not wait on the first transaction',
-    )
-    await release(commitFirst ? 'COMMIT' : 'ROLLBACK')
-    return second
-  })
-}
-
 before(async () => {
-  const name = `erental-verification-${randomUUID()}`
-  const result = await docker(
-    [
-      'run',
-      '--detach',
-      '--rm',
-      '--name',
-      name,
-      '--network',
-      'none',
-      '--tmpfs',
-      '/var/lib/postgresql/data',
-      '--env',
-      `POSTGRES_DB=${database}`,
-      '--env',
-      'POSTGRES_PASSWORD=erental-fixture-only',
-      'postgres:17-bookworm',
-      '-c',
-      'listen_addresses=',
-    ],
-    { timeout: 120_000 },
-  )
-  container = result.stdout.trim()
-
-  await until(
-    async () => {
-      try {
-        // The image starts a short-lived setup server before its final process.
-        const { stdout } = await docker([
-          'exec',
-          container,
-          'cat',
-          '/proc/1/comm',
-        ])
-        return stdout.trim() === 'postgres' && (await query('SELECT 1')) === '1'
-      } catch {
-        return false
-      }
-    },
-    'Disposable PostgreSQL did not start',
-    20_000,
-  )
-  console.log('Database fixture:', await query('SHOW server_version'))
+  await start()
   await query(fixtureSchema())
   await assert.rejects(query(migration), /Expected verification RPC is missing/)
-  await query(`
-    ${original.definition};
-    REVOKE EXECUTE ON FUNCTION public.review_verification(uuid, text, text) FROM PUBLIC;
-    GRANT EXECUTE ON FUNCTION public.review_verification(uuid, text, text) TO authenticated, service_role;
-  `)
+  await query(installOriginalReview)
   originalAttributes = await rpcAttributes()
   await query(migration)
 
@@ -314,9 +67,7 @@ before(async () => {
   `)
 })
 
-after(async () => {
-  if (container) await docker(['rm', '-f', container])
-})
+after(stop)
 
 test('replacement preserves signature, grants, ownership and restricted review', async () => {
   assert.equal(await rpcAttributes(), originalAttributes)
