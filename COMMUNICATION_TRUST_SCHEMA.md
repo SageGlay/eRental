@@ -1,0 +1,21 @@
+# Communication and trust schema
+
+The repository depends on an existing verified marketplace and the Marketplace Essentials notification contract. The checked-in fixture models later hosted source tables so migrations can be exercised without a remote database. Compare the real catalog before staged installation. [Audit](COMMUNICATION_TRUST_AUDIT.md) · [Catalog query](supabase/diagnostics/communication_trust_contract.sql)
+
+| Version | Database additions and changes |
+| --- | --- |
+| `20261127090000` | Extends the existing notification event and recipient checks. Preserves old event types, keys, rows, grants, read functions and publication behavior. Requires the hardened verification function and a restricted Marketplace Essentials install. |
+| `20261127090001` | Adds `public.user_blocks` with directional uniqueness, contact-pair locks, source triggers and an immutable trusted `messages.recipient_id` derived from conversation participants. It backfills recipient IDs and tightens participant SELECT and recipient-only read-marker writes. The send RPC uses the same RLS and trigger path as controlled legacy inserts. Adds `conversation_reports` and private selected-message evidence. Publishes safe message insert/update changes through Supabase Realtime. |
+| `20261127095438` | Adds `viewing_appointments` and `viewing_appointment_events`. Participant reads are RLS scoped. Updates use authorized revisioned RPCs. A GiST exclusion constraint protects owner calendars and a partial unique index restricts active duplicates. A private event helper appends history and sends a recipient notice. |
+| `20261127095520` | Adds `reviews.is_published`, immutable completed-booking attribution for new reviews, published-review indexes, and a safe public aggregate. Adds one owner response per review and pending-unique `review_disputes`, with participant and moderator access through targeted controls. A resolution can change visibility and send notices atomically. |
+
+## Authorization and access paths
+
+- The block table exposes only rows created by the signed-in user. Mutations derive the blocker from Auth. The contact-status call is scoped to one authorized conversation. A sorted pair record serializes block and contact writes. Durable private rows carry no message data.
+- Private messaging remains RLS protected. The composer sends through an invoker RPC keyed by the stable message ID. A participant-only restrictive SELECT boundary applies to native Realtime checks. Client UPDATE is limited to the recipient's read marker. The publication emits INSERT and UPDATE. [Supabase Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes)
+- Only the reporter and authorized administrators can read report metadata. The private evidence table is inaccessible to ordinary API clients. A narrowly scoped administrator-only function selects evidence for one known case. It does not confer general access to messages.
+- Viewings use one owner calendar and store selected dates as timestamps. The request derives the owner from the listing. A separate private history table remains visible to appointment participants. Notifications record appointment and event IDs, never notes or a physical address.
+- Public owner and listing averages are calculated from individual visible reviews using invoker rights and one-decimal display rounding. Listing reads and hidden-review response filtering stay under RLS. Review data stays associated with the owner at the time of the completed rental, using the validated booking. Review disputes record supporting details and the disposition without modifying the original review text.
+- Internal writers live in `erental_events`. Their functions have fixed search paths and restricted API execution. Privileged operations verify the actor and entity explicitly. The shared notification writer stores controlled event facts with a stable per-operation key.
+
+The main tables and provenance are preserved during recovery. Apply the migration pause or forward remediation only after observing the actual staging definitions. [States and transitions](COMMUNICATION_TRUST_STATE_MACHINES.md) · [Security](COMMUNICATION_TRUST_SECURITY.md) · [Deployment and recovery](COMMUNICATION_TRUST_DEPLOYMENT.md)
