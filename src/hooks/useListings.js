@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient.js'
 
-const CARD_FIELDS = 'id, title, price, price_period, location_text, status, created_at, categories(name, slug), profiles(verified_kind, verified_at), listing_photos(storage_path, sort_order)'
+import { CARD_FIELDS, visibleRental } from '../lib/discovery.js'
 
 // Newest listings first. Removed listings are never shown here.
 export function useLatestListings(limit = 6) {
@@ -23,12 +23,13 @@ export function useLatestListings(limit = 6) {
       try {
         const { data, error } = await supabase.from('listings')
           .select(CARD_FIELDS)
-          .neq('status', 'removed')
-          .order('created_at', { ascending: false })
+          .in('status', ['available', 'unavailable'])
+          .eq('removed_by_admin', false)
+          .order('created_at', { ascending: false }).order('id')
           .limit(limit)
           .abortSignal(controller.signal)
         if (error) throw error
-        if (active) setState({ listings: data ?? [], loading: false, error: null })
+        if (active) setState({ listings: (data ?? []).filter(visibleRental), loading: false, error: null })
       } catch {
         if (active) setState({ listings: [], loading: false, error: 'We couldn’t load the latest listings. Check your connection and try again.' })
       } finally {

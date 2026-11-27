@@ -296,6 +296,12 @@ export default function ProfilePage() {
               </div>
               <ThemeControl />
             </div>
+            <div className="profile-settings__row">
+              <div>
+                <h3>Marketplace information</h3>
+                <p><Link to="/terms">Terms and conditions</Link> · <Link to="/privacy">Privacy notice</Link></p>
+              </div>
+            </div>
           </section>
         </div>
       </div>

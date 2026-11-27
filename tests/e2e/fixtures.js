@@ -40,6 +40,18 @@ export async function mockMarketplace(page, override = async () => false, { sign
     if (method === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } })
     if (url.pathname === '/auth/v1/logout') return json(route, {})
     if (url.pathname === '/rest/v1/rpc/is_admin') return json(route, false)
+    if (url.pathname === '/rest/v1/saved_listings' && method === 'GET') return json(route, [])
+    if (url.pathname === '/rest/v1/recently_viewed_listings' && ['GET', 'DELETE'].includes(method)) return json(route, [])
+    if (url.pathname === '/rest/v1/rpc/record_listing_view' && method === 'POST') return json(route, null)
+    if (url.pathname === '/rest/v1/notifications' && method === 'HEAD') {
+      return route.fulfill({ status: 200, headers: { 'content-range': '*/0', 'access-control-expose-headers': 'content-range' } })
+    }
+    if (url.pathname === '/rest/v1/notifications' && method === 'GET') {
+      return route.fulfill({
+        json: [],
+        headers: { 'content-range': '*/0', 'access-control-expose-headers': 'content-range' },
+      })
+    }
     if (url.pathname === '/rest/v1/rpc/listing_booked_ranges') return json(route, [])
     if (url.pathname === '/rest/v1/rpc/search_listings') return json(route, [])
     if (url.pathname === '/rest/v1/profiles') return json(route, request.headers().accept?.includes('vnd.pgrst.object') ? profile : [profile])

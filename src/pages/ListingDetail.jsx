@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { formatDate, formatPrice, formatRate } from '../lib/format.js'
 import { photoUrl, sortedPhotos } from '../lib/photos.js'
@@ -10,6 +10,8 @@ import OwnerRating from '../components/OwnerRating.jsx'
 import MessageOwnerButton from '../components/MessageOwnerButton.jsx'
 import RequestForm from '../components/RequestForm.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import BookmarkButton from '../components/BookmarkButton.jsx'
+import { recordView, visibleRental } from '../lib/discovery.js'
 import LoadError from '../components/LoadError.jsx'
 import { useListingRecord } from '../hooks/useListingRecord.js'
 import VerifiedBadge from '../components/VerifiedBadge.jsx'
@@ -17,7 +19,7 @@ import Icon from '../components/Icon.jsx'
 import '../styles/detail.css'
 
 const FIELDS =
-  'id, owner_id, title, description, price, price_period, deposit, location_text, terms, details, status, created_at, categories(name, slug), listing_photos(storage_path, sort_order), profiles(display_name, account_type, business_name, created_at, verified_kind, verified_at)'
+  'id, owner_id, title, description, price, price_period, deposit, location_text, terms, details, status, removed_by_admin, created_at, categories(name, slug), listing_photos(storage_path, sort_order), profiles(display_name, account_type, business_name, created_at, verified_kind, verified_at)'
 
 function RentalPhoto({ path, alt, thumbnail = false }) {
   const [failed, setFailed] = useState(false)
@@ -40,8 +42,20 @@ function RentalPhoto({ path, alt, thumbnail = false }) {
 
 export default function ListingDetail() {
   const { id } = useParams()
-  const { user } = useAuth()
+  const { user, loading, authError } = useAuth()
+  if (loading) return <p className="container page" role="status">Loading listing…</p>
+  return <RentalDetails key={user?.id || 'guest'} id={id} user={user} trackViews={!authError} />
+}
+
+function RentalDetails({ id, user, trackViews }) {
   const { listing, loading, error, retry } = useListingRecord(id, FIELDS)
+  const lastView = useRef(null)
+  useEffect(() => {
+    if (!trackViews || !visibleRental(listing) || listing.id !== id || lastView.current === id) return
+    lastView.current = id
+    // Optional personalization must never block access to a successfully loaded rental.
+    recordView(user?.id || null, id).catch(() => {})
+  }, [id, listing, user?.id, trackViews])
   const [active, setActive] = useState(0)
 
   useEffect(() => {
@@ -122,6 +136,7 @@ export default function ListingDetail() {
             <span>Listed {formatDate(listing.created_at)}</span>
           </div>
         </div>
+        {visibleRental(listing) && <BookmarkButton listing={listing} />}
         {user?.id === listing.owner_id && (
           <Link
             className="btn btn-ghost listing-detail__edit"

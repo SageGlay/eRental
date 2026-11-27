@@ -46,12 +46,17 @@ These tests validate frontend behavior against controlled API responses. They do
 - Rental requests, owner decisions, booking schedule/history, simulated payments and reviews.
 - Text conversations, unread message counts, listing reports and administrator report resolution.
 - Private individual/business verification requests, administrator approval/rejection, and protected-profile verified badges.
+- Persistent saved rentals, clearable recent history and category recommendations. The homepage features available, photographed rentals from real owners.
+- An account notification center for booking activity, messages, simulated payments and verification decisions, with an independent unread count and read controls.
+- Public draft terms and privacy information.
+
+The saved, history and notification features depend on the reviewed marketplace essentials migration. [Milestone handoff](MARKETPLACE_ESSENTIALS_HANDOFF.md) · [Staging and rollout](MARKETPLACE_ESSENTIALS_DEPLOYMENT.md)
 
 The existing architecture is in `src/pages`, `src/components`, `src/hooks`, `src/context` and `src/lib`; visual tokens live in `src/styles/tokens.css`.
 
 ## Supabase schema and live validation
 
-The checked-in migration records the foundation tables, privileges/RLS, category seed and `listing-photos` bucket. It does not contain the later definitions used by bookings, conversations/messages, reviews, reports, simulated payments or search/availability/resolution RPCs. The separately exported verification definitions are recorded in `supabase/contracts/verification.json`; later booking/messaging/search definitions still need repository records. Review deployed definitions before proposing schema changes. Do not replay the foundation migration against an existing project as a repair.
+The checked-in migration records the foundation tables, privileges/RLS, category seed and `listing-photos` bucket. It does not contain the later definitions used by bookings, conversations/messages, reviews, reports, simulated payments or search/availability/resolution RPCs. The separately exported verification definitions are recorded in `supabase/contracts/verification.json`; later booking/messaging/search definitions still need repository records. The verification hardening and marketplace essentials migrations require the corresponding existing database objects. Compare the deployed definitions and migration history before applying either version. Do not replay the foundation migration against an existing project as a repair.
 
 Live verification also requires network access to the configured project hostname and appropriate test users. Preserve database enforcement: frontend route checks and date checks are usability defenses, not substitutes for RLS, transactional booking constraints or authorized RPCs.
 

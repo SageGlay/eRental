@@ -271,7 +271,7 @@ function BookingCard({ b, role, onChange, onResult }) {
   }
 
   return (
-    <li className="booking booking-card">
+    <li className="booking booking-card" id={`booking-${b.id}`} tabIndex={-1}>
       <div className="booking-card__content">
         <header className="booking-card__heading">
           <BookingDate date={b.start_date} />

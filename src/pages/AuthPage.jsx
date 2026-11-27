@@ -10,6 +10,9 @@ const returnPaths = [
   '/list',
   '/my-listings',
   '/bookings',
+  '/saved',
+  '/notifications',
+  '/listings/:id',
   '/messages',
   '/messages/:id',
   '/profile',
@@ -233,6 +236,12 @@ function AccountEntry({ mode }) {
           </button>
         </fieldset>
       </form>
+      {isRegister && (
+        <p className="account-entry__legal">
+          Read the <Link to="/terms">Terms and conditions</Link> and{' '}
+          <Link to="/privacy">Privacy notice</Link> before creating an account.
+        </p>
+      )}
     </AccountFormFrame>
   )
 }
