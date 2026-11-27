@@ -1,6 +1,6 @@
 # Communication and marketplace trust audit
 
-The branch starts at `9f7da46`, which merges Marketplace Essentials PR #6 and incorporates the hardened verification review from PR #5. The working tree was clean. The detached baseline checkout installed the lockfile, built successfully in 4.79 seconds, and passed 34 PostgreSQL tests in 55.20 seconds. The browser baseline runs against that same unchanged checkout. [Marketplace Essentials handoff](MARKETPLACE_ESSENTIALS_HANDOFF.md) · [Verification hardening handoff](VERIFICATION_SECURITY_HANDOFF.md)
+The branch starts at `9f7da46`, which merges Marketplace Essentials PR #6 and incorporates the hardened verification review from PR #5. The working tree was clean. The detached baseline checkout installed the lockfile, built successfully in 4.79 seconds, and passed 34 PostgreSQL tests in 55.20 seconds. The unchanged browser baseline passed all 169 cases in 3.4 minutes. [Marketplace Essentials handoff](MARKETPLACE_ESSENTIALS_HANDOFF.md) · [Verification hardening handoff](VERIFICATION_SECURITY_HANDOFF.md)
 
 | Area | Confirmed source and next implementation |
 | --- | --- |
